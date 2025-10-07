@@ -6,6 +6,7 @@ export default function Labs() {
      <p>Name: Nisha Murthy Dinesh</p>
      <p>Section: CS 5610 Fall 2025</p>
      <a href ="https://github.com/nishamurthy-22/kambaz-next-js.git"> My Github Repo</a>
+     
 
      <ul>
        <li>
