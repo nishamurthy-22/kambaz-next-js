@@ -5,7 +5,7 @@ export default function Labs() {
      <h1>Labs</h1>
      <p>Name: Nisha Murthy Dinesh</p>
      <p>Section: CS 5610 Fall 2025</p>
-     <a href ="https://github.com/nishamurthy-22/kambaz-next-js.git"> My Github Repo</a>
+     <a href ="https://github.com/nishamurthy-22/kambaz-next-js.git" id="wd-github"> My Github Repo</a>
      
 
      <ul>
