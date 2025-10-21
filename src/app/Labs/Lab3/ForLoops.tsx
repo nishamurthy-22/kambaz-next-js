@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 export default function ForLoops() {
   let stringArray1 = ["string1", "string3"];
   let stringArray2 = [];

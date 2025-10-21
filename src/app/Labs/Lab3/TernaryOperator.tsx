@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 export default function TernaryOperator() {
      let loggedIn = true;
  return(

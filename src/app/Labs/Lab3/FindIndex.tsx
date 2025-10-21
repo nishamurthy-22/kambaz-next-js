@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 export default function FindIndex() {
 let numberArray1 = [1, 2, 4, 5, 6];
 let stringArray1 = ['string1', 'string3'];
