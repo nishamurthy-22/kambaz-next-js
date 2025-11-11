@@ -1,20 +1,50 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import * as db from "../../../Database";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "../../../store";
+import { deleteAssignment } from "./reducer";
 import AssignmentControls from "./AssignmentControls";
 import { ListGroup, ListGroupItem } from "react-bootstrap";
 import { MdArrowDropDown } from "react-icons/md";
 import { BsGripVertical } from "react-icons/bs";
 import { LuNotebookPen } from "react-icons/lu";
 import AssignmentControlButtons from "./AssignmentControlButtons";
-import LessonControlButtons from "./LessonControlButtons";
+import AssignmentLessonControlButtons from "./AssignmentLessonControlButtons";
+import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 
 export default function Assignments() {
   const { cid } = useParams();
-  const { assignments } = db; 
+  const dispatch = useDispatch();
+  const { assignments } = useSelector((state: RootState) => state.assignmentReducer);
+  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
+  const isFaculty = (currentUser as any)?.role === "FACULTY";
 
-  const courseAssignments = assignments.filter((a) => a.course === cid);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  const courseAssignments = assignments.filter((a: any) => a.course === cid);
+
+  const handleDeleteClick = (assignmentId: string) => {
+    const assignment = courseAssignments.find((a: any) => a._id === assignmentId);
+    if (assignment) {
+      setAssignmentToDelete({ id: assignmentId, title: assignment.title });
+      setShowDeleteDialog(true);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (assignmentToDelete) {
+      dispatch(deleteAssignment(assignmentToDelete.id));
+      setAssignmentToDelete(null);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setShowDeleteDialog(false);
+    setAssignmentToDelete(null);
+  };
 
   return (
     <div>
@@ -33,7 +63,7 @@ export default function Assignments() {
               <span className="border rounded-pill px-3 py-1 bg-white text-secondary">
                 40% of Total
               </span>
-              <AssignmentControlButtons />
+              {isFaculty && <AssignmentControlButtons />}
             </div>
           </div>
 
@@ -76,7 +106,12 @@ export default function Assignments() {
                     </div>
                   </div>
                 </div>
-                <LessonControlButtons />
+                {isFaculty && (
+                  <AssignmentLessonControlButtons
+                    assignmentId={assignment._id}
+                    onDeleteClick={handleDeleteClick}
+                  />
+                )}
               </ListGroupItem>
             ))}
           </ListGroup>
@@ -92,7 +127,7 @@ export default function Assignments() {
               <span className="border rounded-pill px-3 py-1 bg-white text-secondary">
                 20% of Total
               </span>
-              <AssignmentControlButtons />
+              {isFaculty && <AssignmentControlButtons />}
             </div>
           </div>
           </ListGroupItem>
@@ -106,7 +141,7 @@ export default function Assignments() {
               <span className="border rounded-pill px-3 py-1 bg-white text-secondary">
                 20% of Total
               </span>
-              <AssignmentControlButtons />
+              {isFaculty && <AssignmentControlButtons />}
             </div>
           </div>
           </ListGroupItem>
@@ -121,12 +156,20 @@ export default function Assignments() {
               <span className="border rounded-pill px-3 py-1 bg-white text-secondary">
                 20% of Total
               </span>
-              <AssignmentControlButtons />
+              {isFaculty && <AssignmentControlButtons />}
             </div>
           </div>
           </ListGroupItem>
       </ListGroup>
 
+      {assignmentToDelete && (
+        <DeleteConfirmationDialog
+          show={showDeleteDialog}
+          handleClose={handleCloseDialog}
+          assignmentTitle={assignmentToDelete.title}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

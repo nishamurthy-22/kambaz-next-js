@@ -2,12 +2,15 @@
 "use client";
 import React from "react";
 import { useParams } from "next/navigation";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../../store";
 import * as db from "../../../../Database";
 import { FaUserCircle } from "react-icons/fa";
 
 export default function PeopleTable() {
   const { cid } = useParams();
-  const { users, enrollments } = db;
+  const { users } = db;
+  const { enrollments } = useSelector((state: RootState) => state.enrollmentsReducer);
 
   const enrolledUsers = users?.filter((usr: any) =>
     enrollments?.some(

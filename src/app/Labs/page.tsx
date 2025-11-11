@@ -22,7 +22,11 @@ export default function Labs() {
            Lab 3: JavaScript Fundamentals </Link>
        </li>
         <li>
-            <Link href="/" id="wd-lab3-link">
+         <Link href="/Labs/Lab4" id="wd-lab4-link">
+           Lab 4</Link>
+       </li>
+        <li>
+            <Link href="/" id="wd-kambaz-link">
             Kambaz </Link> </li>
      </ul>
    </div>

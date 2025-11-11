@@ -1,6 +1,9 @@
 "use client";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import * as db from "../../../../Database";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "../../../../store";
+import { addAssignment, updateAssignment } from "../reducer";
 import {
   Button,
   Card,
@@ -14,13 +17,22 @@ import {
 export default function AssignmentEditor() {
   const { cid, aid } = useParams();
   const router = useRouter();
-  const { assignments } = db;
-  const assignment = assignments.find((a) => a._id === aid);
+  const dispatch = useDispatch();
+  const { assignments } = useSelector((state: RootState) => state.assignmentReducer);
+  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
+  const isFaculty = (currentUser as any)?.role === "FACULTY";
+  const isNew = aid === "new";
+  
+  const existingAssignment = isNew ? null : assignments.find((a: any) => a._id === aid);
+  
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [points, setPoints] = useState(100);
+  const [dueDate, setDueDate] = useState("");
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [availableUntil, setAvailableUntil] = useState("");
 
-  if (!assignment) {
-    return <div className="p-4">Assignment not found.</div>;
-  }
-
+  // Helper function to format date string to datetime-local input format
   const formatForInput = (dateString: string) => {
     if (!dateString) return "";
 
@@ -52,6 +64,64 @@ export default function AssignmentEditor() {
     return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
+  const formatForDisplay = (dateTimeLocal: string) => {
+    if (!dateTimeLocal) return "";
+    const date = new Date(dateTimeLocal);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    let hour = date.getHours();
+    const minute = date.getMinutes();
+    const ampm = hour >= 12 ? "pm" : "am";
+    hour = hour % 12 || 12;
+    const minStr = minute.toString().padStart(2, "0");
+    return `${month} ${day}, ${year} at ${hour}:${minStr} ${ampm}`;
+  };
+
+  useEffect(() => {
+    if (existingAssignment) {
+      setTitle(existingAssignment.title || "");
+      setDescription(existingAssignment.description || "");
+      setPoints(existingAssignment.points || 100);
+      setDueDate(formatForInput(existingAssignment["Due"] || ""));
+      setAvailableFrom(formatForInput(existingAssignment["Not available until"] || ""));
+      setAvailableUntil(formatForInput((existingAssignment as any)["Available until"] || ""));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingAssignment]);
+
+  // Redirect students if they try to edit
+  if (!isFaculty && !isNew && !existingAssignment) {
+    return <div className="p-4">Assignment not found.</div>;
+  }
+
+  const handleSave = () => {
+    if (!isFaculty) return;
+    
+    const assignmentData: any = {
+      title,
+      description,
+      points: parseInt(points.toString(), 10),
+      course: cid,
+      "Due": formatForDisplay(dueDate),
+      "Not available until": formatForDisplay(availableFrom),
+      "Available until": formatForDisplay(availableUntil),
+    };
+
+    if (isNew) {
+      dispatch(addAssignment(assignmentData));
+    } else if (existingAssignment) {
+      dispatch(updateAssignment({ ...existingAssignment, ...assignmentData }));
+    }
+    
+    router.push(`/Courses/${cid}/Assignments`);
+  };
+
+  const handleCancel = () => {
+    router.push(`/Courses/${cid}/Assignments`);
+  };
+
   return (
     <div
       id="wd-assignments-editor"
@@ -61,20 +131,32 @@ export default function AssignmentEditor() {
       <Form>
         <Form.Group className="mb-3" controlId="wd-name">
           <Form.Label className="fw-semibold">Assignment Name</Form.Label>
-          <Form.Control defaultValue={assignment.title} />
+          <Form.Control 
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={!isFaculty}
+          />
         </Form.Group>
 
         <FormControl
           as="textarea"
           rows={10}
           className="mb-3"
-          defaultValue={assignment.description || "Provide details about this assignment here."}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={!isFaculty}
+          placeholder="Provide details about this assignment here."
         />
 
         <Form.Group as={Row} className="mb-3" controlId="wd-points">
           <Form.Label column sm={3} className="text-sm-end">Points</Form.Label>
           <Col sm={9}>
-            <Form.Control type="number" defaultValue={assignment.points || 100} />
+            <Form.Control 
+              type="number" 
+              value={points}
+              onChange={(e) => setPoints(parseInt(e.target.value, 10) || 100)}
+              disabled={!isFaculty}
+            />
           </Col>
         </Form.Group>
 
@@ -141,7 +223,9 @@ export default function AssignmentEditor() {
                   <InputGroup>
                     <Form.Control
                       type="datetime-local"
-                      defaultValue={formatForInput(assignment["Due"])}
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      disabled={!isFaculty}
                     />
                   </InputGroup>
                 </div>
@@ -152,7 +236,9 @@ export default function AssignmentEditor() {
                     <InputGroup>
                       <Form.Control
                         type="datetime-local"
-                        defaultValue={formatForInput(assignment["Not available until"])}
+                        value={availableFrom}
+                        onChange={(e) => setAvailableFrom(e.target.value)}
+                        disabled={!isFaculty}
                       />
                     </InputGroup>
                   </Col>
@@ -162,6 +248,9 @@ export default function AssignmentEditor() {
                     <InputGroup>
                       <Form.Control
                         type="datetime-local"
+                        value={availableUntil}
+                        onChange={(e) => setAvailableUntil(e.target.value)}
+                        disabled={!isFaculty}
                       />
                     </InputGroup>
                   </Col>
@@ -173,19 +262,24 @@ export default function AssignmentEditor() {
 
         <hr />
 
-        <div className="d-flex justify-content-end gap-2">
-          <Button
-            id="wd-cancel"
-            variant="light"
-            onClick={() => router.push(`/Courses/${cid}/Assignments`)}
-          >
-            Cancel
-          </Button>
-          <Button id="wd-save" variant="danger"
-          onClick={() => router.push(`/Courses/${cid}/Assignments`)}>
-            Save
-          </Button>
-        </div>
+        {isFaculty && (
+          <div className="d-flex justify-content-end gap-2">
+            <Button
+              id="wd-cancel"
+              variant="light"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
+            <Button 
+              id="wd-save" 
+              variant="danger"
+              onClick={handleSave}
+            >
+              Save
+            </Button>
+          </div>
+        )}
       </Form>
     </div>
   );
