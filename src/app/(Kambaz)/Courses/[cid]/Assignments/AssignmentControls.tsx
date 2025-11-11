@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -12,7 +13,7 @@ export default function AssignmentControls() {
   const router = useRouter();
   const { cid } = useParams();
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
-  const isFaculty = currentUser?.role === "FACULTY";
+  const isFaculty = (currentUser as any)?.role === "FACULTY";
 
   return (
     <div
