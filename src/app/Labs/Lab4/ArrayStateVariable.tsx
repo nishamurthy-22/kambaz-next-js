@@ -48,6 +48,13 @@ export default function ArrayStateVariable() {
         ))}
       </ListGroup>
       <hr />
+
+      <ListGroup>
+        {todos.map((todo: any) => (
+          <ListGroupItem key={todo.id}>{todo.title}</ListGroupItem>
+        ))}
+      </ListGroup>
+            <hr />
     </div>
   );
 }

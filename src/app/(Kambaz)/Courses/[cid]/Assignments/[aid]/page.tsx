@@ -33,7 +33,6 @@ export default function AssignmentEditor() {
   const [availableFrom, setAvailableFrom] = useState("");
   const [availableUntil, setAvailableUntil] = useState("");
 
-  // Helper function to format date string to datetime-local input format
   const formatForInput = (dateString: string) => {
     if (!dateString) return "";
 
@@ -92,7 +91,6 @@ export default function AssignmentEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingAssignment]);
 
-  // Redirect students if they try to edit
   if (!isFaculty && !isNew && !existingAssignment) {
     return <div className="p-4">Assignment not found.</div>;
   }
