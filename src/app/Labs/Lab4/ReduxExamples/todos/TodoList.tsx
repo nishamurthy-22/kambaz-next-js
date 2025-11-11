@@ -1,22 +1,22 @@
-/* eslint-disable react/jsx-key */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
-import { Button, FormControl, ListGroup, ListGroupItem } from "react-bootstrap";
+import { useSelector } from "react-redux";
+import { ListGroup } from "react-bootstrap";
 import TodoForm from "./TodoForm";
 import TodoItem from "./TodoItem";
-import { useSelector } from "react-redux";
 import { RootState } from "../../store";
+
 export default function TodoList() {
   const { todos } = useSelector((state: RootState) => state.todosReducer);
+
   return (
     <div id="wd-todo-list-redux">
       <h2>Todo List</h2>
+      <TodoForm />
       <ListGroup>
-        <TodoForm />
-        {todos.map((todo: any) => (
-          <TodoItem todo={todo} />
+        {todos.map((todo) => (
+          <TodoItem key={todo.id} todo={todo} />
         ))}
       </ListGroup>
-      <hr/>
+      <hr />
     </div>
-);}
+  );
+}
