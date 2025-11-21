@@ -44,7 +44,6 @@ export default function Dashboard() {
       description: "New Description"
     });
     setFormKey(prev => prev + 1);
-    // Refresh enrollments to ensure new course is not auto-enrolled
     if (currentUser) {
       fetchEnrollments();
     }
@@ -62,10 +61,17 @@ export default function Dashboard() {
 
   const fetchEnrollments = async () => {
     try {
-      const enrollments = await client.findEnrollmentsForUser();
-      dispatch(setEnrollments(enrollments));
-    } catch (error) {
-      console.error(error);
+      if (currentUser) {
+        const enrollments = await client.findEnrollmentsForUser();
+        dispatch(setEnrollments(enrollments));
+      }
+    } catch (error: any) {
+      // Silently handle 401 errors (user not logged in or session expired)
+      if (error?.response?.status !== 401) {
+        console.error(error);
+      }
+      // Set empty enrollments if fetch fails
+      dispatch(setEnrollments([]));
     }
   };
 
@@ -90,15 +96,24 @@ export default function Dashboard() {
   const handleEnrollment = async (courseId: string, event: any) => {
     event.preventDefault();
     event.stopPropagation();
-    if (isEnrolled(courseId)) {
-      await client.unenrollUserFromCourse(courseId);
-      dispatch(removeEnrollment({ userId, courseId }));
-      if (!showAllCourses) {
-        setShowAllCourses(true);
+    try {
+      if (isEnrolled(courseId)) {
+        await client.unenrollUserFromCourse(courseId);
+        dispatch(removeEnrollment({ userId, courseId }));
+        if (!showAllCourses) {
+          setShowAllCourses(true);
+        }
+      } else {
+        await client.enrollUserInCourse(courseId);
+        dispatch(addEnrollment({ userId, courseId }));
       }
-    } else {
-      await client.enrollUserInCourse(courseId);
-      dispatch(addEnrollment({ userId, courseId }));
+      await fetchEnrollments();
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        console.error("Unauthorized: Please log in again");
+      } else {
+        console.error("Error handling enrollment:", error);
+      }
     }
   };
 
