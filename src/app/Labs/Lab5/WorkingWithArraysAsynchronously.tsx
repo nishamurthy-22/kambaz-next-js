@@ -41,11 +41,11 @@ export default function WorkingWithArraysAsynchronously() {
   try {
     const updatedTodos = await client.removeTodo(todo);
     setTodos(updatedTodos);
+    setErrorMessage(null);
   } catch (error: any) {
     setErrorMessage(error.response?.data?.message || `Unable to delete Todo with ID ${todo.id}`);
   }
 };
-
     const deleteTodo = async (todo: any) => {
     try {
     await client.deleteTodo(todo);
@@ -55,7 +55,6 @@ export default function WorkingWithArraysAsynchronously() {
       console.log(error);
       setErrorMessage(error.response.data.message);
     }
-
   };
   useEffect(() => {
     fetchTodos();
