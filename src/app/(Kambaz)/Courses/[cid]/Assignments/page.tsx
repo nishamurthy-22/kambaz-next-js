@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState } from "react";
+import * as client from "../../client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../store";
-import { deleteAssignment } from "./reducer";
+import { deleteAssignment, setAssignments } from "./reducer";
 import AssignmentControls from "./AssignmentControls";
 import { ListGroup, ListGroupItem } from "react-bootstrap";
 import { MdArrowDropDown } from "react-icons/md";
@@ -19,25 +20,34 @@ export default function Assignments() {
   const { cid } = useParams();
   const dispatch = useDispatch();
   const { assignments } = useSelector((state: RootState) => state.assignmentReducer);
+    const fetchAssignments = async () => {
+    const modules = await client.findAssignmentsForCourse(cid as string);
+    dispatch(setAssignments(modules));
+  };
+  useEffect(() => {
+    fetchAssignments();
+  }, []);
+
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const isFaculty = (currentUser as any)?.role === "FACULTY";
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [assignmentToDelete, setAssignmentToDelete] = useState<{ id: string; title: string } | null>(null);
 
-  const courseAssignments = assignments.filter((a: any) => a.course === cid);
+  const courseAssignments = assignments.filter((a: any) => a.course === cid) as any[];
 
   const handleDeleteClick = (assignmentId: string) => {
-    const assignment = courseAssignments.find((a: any) => a._id === assignmentId);
+    const assignment = courseAssignments.find((a: any) => a._id === assignmentId) as any;
     if (assignment) {
       setAssignmentToDelete({ id: assignmentId, title: assignment.title });
       setShowDeleteDialog(true);
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (assignmentToDelete) {
-      dispatch(deleteAssignment(assignmentToDelete.id));
+      await client.deleteAssignment(assignmentToDelete.id);
+      dispatch(setAssignments(assignments.filter((a: any) => a._id !== assignmentToDelete.id)));
       setAssignmentToDelete(null);
     }
   };

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../../store";
-import { addAssignment, updateAssignment } from "../reducer";
+import { setAssignments } from "../reducer";
+import * as client from "../../../client";
 import {
   Button,
   Card,
@@ -24,7 +25,7 @@ export default function AssignmentEditor() {
   const isFaculty = (currentUser as any)?.role === "FACULTY";
   const isNew = aid === "new";
   
-  const existingAssignment = isNew ? null : assignments.find((a: any) => a._id === aid);
+  const existingAssignment = isNew ? null : (assignments.find((a: any) => a._id === aid) as any);
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -80,6 +81,17 @@ export default function AssignmentEditor() {
   };
 
   useEffect(() => {
+    const fetchAssignments = async () => {
+      if (cid) {
+        const fetchedAssignments = await client.findAssignmentsForCourse(cid as string);
+        dispatch(setAssignments(fetchedAssignments));
+      }
+    };
+    fetchAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cid]);
+
+  useEffect(() => {
     if (existingAssignment) {
       setTitle(existingAssignment.title || "");
       setDescription(existingAssignment.description || "");
@@ -95,8 +107,8 @@ export default function AssignmentEditor() {
     return <div className="p-4">Assignment not found.</div>;
   }
 
-  const handleSave = () => {
-    if (!isFaculty) return;
+  const handleSave = async () => {
+    if (!isFaculty || !cid) return;
     
     const assignmentData: any = {
       title,
@@ -109,9 +121,15 @@ export default function AssignmentEditor() {
     };
 
     if (isNew) {
-      dispatch(addAssignment(assignmentData));
+      const newAssignment = await client.createAssignmentForCourse(cid as string, assignmentData);
+      dispatch(setAssignments([...assignments, newAssignment]));
     } else if (existingAssignment) {
-      dispatch(updateAssignment({ ...existingAssignment, ...assignmentData }));
+      const updatedAssignment = { ...(existingAssignment as any), ...assignmentData };
+      await client.updateAssignment(updatedAssignment);
+      const newAssignments = assignments.map((a: any) => 
+        a._id === updatedAssignment._id ? updatedAssignment : a
+      );
+      dispatch(setAssignments(newAssignments));
     }
     
     router.push(`/Courses/${cid}/Assignments`);

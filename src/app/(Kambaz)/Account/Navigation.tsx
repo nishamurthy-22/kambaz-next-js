@@ -12,7 +12,7 @@ export default function AccountNavigation() {
    <Nav variant="pills">
      {links.map((link) => (
        <NavItem key={link}>
-         <NavLink as={Link} href={link} active={pathname.endsWith(link.toLowerCase())}>
+         <NavLink as={Link} href={`/Account/${link}`} active={pathname.endsWith(link.toLowerCase())}>
            {link} </NavLink> </NavItem>
      ))}
    </Nav>
