@@ -20,7 +20,7 @@ export const fetchTodos = async () => {
   return response.data;
 };
 export const removeTodo = async (todo: any) => {
-  const response = await axios.get(`${TODOS_API}/${todo.id}/delete`);
+  const response = await axios.delete(`${TODOS_API}/${todo.id}/delete`);
   return response.data;
 };
 export const createNewTodo = async () => {

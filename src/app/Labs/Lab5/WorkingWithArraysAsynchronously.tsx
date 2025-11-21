@@ -36,10 +36,16 @@ export default function WorkingWithArraysAsynchronously() {
     const todos = await client.fetchTodos();
     setTodos(todos);
   };
-    const removeTodo = async (todo: any) => {
+
+  const removeTodo = async (todo: any) => {
+  try {
     const updatedTodos = await client.removeTodo(todo);
     setTodos(updatedTodos);
-  };
+  } catch (error: any) {
+    setErrorMessage(error.response?.data?.message || `Unable to delete Todo with ID ${todo.id}`);
+  }
+};
+
     const deleteTodo = async (todo: any) => {
     try {
     await client.deleteTodo(todo);
