@@ -5,10 +5,10 @@ export default function Labs() {
      <h1>Labs</h1>
      <p>Name: Nisha Murthy Dinesh</p>
      <p>Section: CS 5610 Fall 2025</p>
-     <a href ="https://github.com/nishamurthy-22/kambaz-next-js.git" id="wd-github"> My Github Repo</a>
+     <a href ="https://github.com/nishamurthy-22/kambaz-next-js.git" id="wd-github"> My Github Repo for Frontend</a>
      <br/>
      <a href ="https://github.com/nishamurthy-22/kambaz-node-server-app.git" id="wd-github"> My Github Repo for server</a><br/>
-     <a href ="https://kambaz-node-server-app-rnjg.onrender.com" id="wd-github"> Server Link</a>
+     <a href ="https://kambaz-node-server-app-rnjg.onrender.com" id="wd-github"> Server Link</a> <br/>
      
 
      <ul>
