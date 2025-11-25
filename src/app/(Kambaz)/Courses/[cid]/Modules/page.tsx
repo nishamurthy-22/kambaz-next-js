@@ -19,20 +19,24 @@ export default function Modules() {
     const { cid } = useParams();
     const [moduleName, setModuleName] = useState("");
      const { modules } = useSelector((state: RootState) => state.modulesReducer);
+    const { currentUser } = useSelector((state: RootState) => state.accountReducer);
+    const isFaculty = (currentUser as any)?.role === "FACULTY";
     const dispatch = useDispatch();
   const onUpdateModule = async (module: any) => {
+    if (!isFaculty) return;
     await client.updateModule(module);
     const newModules = modules.map((m: any) => m._id === module._id ? module : m );
     dispatch(setModules(newModules));
   };
 
       const onRemoveModule = async (moduleId: string) => {
+    if (!isFaculty) return;
     await client.deleteModule(moduleId);
     dispatch(setModules(modules.filter((m: any) => m._id !== moduleId)));
   };
 
       const onCreateModuleForCourse = async () => {
-    if (!cid) return;
+    if (!isFaculty || !cid) return;
     const newModule = { name: moduleName, course: cid };
     const module = await client.createModuleForCourse(cid as string, newModule);
     dispatch(setModules([...modules, module]));
@@ -47,14 +51,15 @@ export default function Modules() {
 
   return (
     <div>     
- <ModulesControls setModuleName={setModuleName} moduleName={moduleName} addModule={onCreateModuleForCourse} /><br /><br /><br /><br />
+ <ModulesControls setModuleName={setModuleName} moduleName={moduleName} addModule={onCreateModuleForCourse} isFaculty={isFaculty} />
+      <br /><br /><br /><br />
       <ListGroup id="wd-modules" className="rounded-0">
         {modules.map((module: any) => (
           <ListGroupItem className="wd-module p-0 mb-5 fs-5 border-gray">
     <div className="wd-title p-3 ps-2 bg-secondary">
       <BsGripVertical className="me-2 fs-3" />
       {!module.editing && module.name}
-      { module.editing && (
+      { module.editing && isFaculty && (
         <FormControl className="w-50 d-inline-block"
                onChange={(e) =>  dispatch(
                         updateModule({ ...module, name: e.target.value })
@@ -66,10 +71,12 @@ export default function Modules() {
                }}
                defaultValue={module.name}/>
       )}
-      <ModulesControlButtons
-        moduleId={module._id}
-         deleteModule={(moduleId) => onRemoveModule(moduleId)}
-        editModule={(moduleId) => dispatch(editModule(moduleId))}/>
+      {isFaculty && (
+        <ModulesControlButtons
+          moduleId={module._id}
+          deleteModule={(moduleId) => onRemoveModule(moduleId)}
+          editModule={(moduleId) => dispatch(editModule(moduleId))}/>
+      )}
       </div>
             {module.lessons && (
               <ListGroup className="wd-lessons rounded-0">
