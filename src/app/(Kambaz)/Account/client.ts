@@ -17,6 +17,7 @@ export const updateUser = async (user: any) => {
   const response = await axiosWithCredentials.put(`${USERS_API}/${user._id}`, user);
   return response.data;
 };
+
 export const profile = async () => {
   const response = await axiosWithCredentials.post(`${USERS_API}/profile`);
   return response.data;
@@ -27,7 +28,7 @@ export const signout = async () => {
 };
 
 export const findAllUsers = async () => {
-  const response = await axios.get(USERS_API);
+  const response = await axiosWithCredentials.get(USERS_API);
   return response.data;
 };
 
@@ -36,14 +37,30 @@ export const findUserById = async (userId: string) => {
   return response.data;
 };
 
+export const findUsersByRole = async (role: string) => {
+  const response = await
+    axios.get(`${USERS_API}?role=${role}`);
+  return response.data;
+};
+
+export const findUsersByPartialName = async (name: string) => {
+  const response = await axios.get(`${USERS_API}?name=${name}`);
+  return response.data;
+};
+
 export const createUser = async (user: any) => {
   const response = await axiosWithCredentials.post(USERS_API, user);
   return response.data;
 };
 
+// export const deleteUser = async (userId: string) => {
+//   await axiosWithCredentials.delete(`${USERS_API}/${userId}`);
+// };
 export const deleteUser = async (userId: string) => {
-  await axiosWithCredentials.delete(`${USERS_API}/${userId}`);
+  const response = await axios.delete( `${USERS_API}/${userId}` );
+  return response.data;
 };
+
 
 const COURSES_API = `${HTTP_SERVER}/api/courses`;
 export const findUsersEnrolledInCourse = async (courseId: string) => {
