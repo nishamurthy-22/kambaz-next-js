@@ -21,7 +21,7 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
   const isFaculty = (currentUser as any)?.role === "FACULTY";
   
   const isEnrolled = enrollments.some(
-    (e: any) => e.user === userId && e.course === cid
+    (e: any) => String(e.user) === String(userId) && String(e.course) === String(cid)
   );
 
   useEffect(() => {

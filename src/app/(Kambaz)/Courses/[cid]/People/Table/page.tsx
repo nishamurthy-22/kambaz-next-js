@@ -7,6 +7,7 @@ import PeopleDetails from "../Details";
 import Link from "next/link";
 import { RootState } from "../../../../store";
 import * as client from "../../../../Account/client";
+import * as coursesClient from "../../../../Courses/client";
 import { FaUserCircle } from "react-icons/fa";
 import { Button, Modal, Form } from "react-bootstrap";
 
@@ -45,7 +46,7 @@ export default function PeopleTablePage() {
 
   const fetchUsers = async () => {
     if (!cid) return;
-    const fetchedUsers = await client.findUsersEnrolledInCourse(cid as string);
+    const fetchedUsers = await coursesClient.findUsersForCourse(cid as string);
     setUsers(fetchedUsers);
   };
 

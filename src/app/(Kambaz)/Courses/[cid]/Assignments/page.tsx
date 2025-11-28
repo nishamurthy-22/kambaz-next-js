@@ -47,7 +47,8 @@ export default function Assignments() {
   const handleConfirmDelete = async () => {
     if (assignmentToDelete) {
       await client.deleteAssignment(assignmentToDelete.id);
-      dispatch(setAssignments(assignments.filter((a: any) => a._id !== assignmentToDelete.id)));
+      // Refresh assignments from server to ensure consistency
+      await fetchAssignments();
       setAssignmentToDelete(null);
     }
   };

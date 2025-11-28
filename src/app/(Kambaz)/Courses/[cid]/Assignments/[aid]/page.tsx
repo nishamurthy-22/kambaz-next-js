@@ -121,15 +121,16 @@ export default function AssignmentEditor() {
     };
 
     if (isNew) {
-      const newAssignment = await client.createAssignmentForCourse(cid as string, assignmentData);
-      dispatch(setAssignments([...assignments, newAssignment]));
+      await client.createAssignmentForCourse(cid as string, assignmentData);
     } else if (existingAssignment) {
       const updatedAssignment = { ...(existingAssignment as any), ...assignmentData };
       await client.updateAssignment(updatedAssignment);
-      const newAssignments = assignments.map((a: any) => 
-        a._id === updatedAssignment._id ? updatedAssignment : a
-      );
-      dispatch(setAssignments(newAssignments));
+    }
+    
+    // Refresh assignments from server to ensure consistency
+    if (cid) {
+      const fetchedAssignments = await client.findAssignmentsForCourse(cid as string);
+      dispatch(setAssignments(fetchedAssignments));
     }
     
     router.push(`/Courses/${cid}/Assignments`);
