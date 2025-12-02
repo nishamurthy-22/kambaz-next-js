@@ -89,6 +89,10 @@ export default function Users() {
             // Refresh users list after deletion
             await fetchUsers();
           }}
+          onUpdate={async () => {
+            // Refresh users list after update
+            await fetchUsers();
+          }}
         />
       )}
       <div style={{ marginRight: showDetails ? "25%" : "0" }}>

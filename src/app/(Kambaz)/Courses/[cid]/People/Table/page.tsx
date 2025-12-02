@@ -127,6 +127,10 @@ export default function PeopleTablePage() {
             // Refresh users list after deletion
             await fetchUsers();
           }}
+          onUpdate={async () => {
+            // Refresh users list after update
+            await fetchUsers();
+          }}
         />
       )}
       <div id="wd-people-table" style={{ marginRight: showDetails ? "25%" : "0" }}>
