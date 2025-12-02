@@ -63,7 +63,6 @@ export default function Dashboard() {
     try {
       if (currentUser) {
         const enrollments = await client.findEnrollmentsForUser();
-        // Normalize enrollment IDs to strings for consistent comparison
         const normalizedEnrollments = enrollments.map((e: any) => ({
           ...e,
           user: String(e.user),
@@ -72,11 +71,9 @@ export default function Dashboard() {
         dispatch(setEnrollments(normalizedEnrollments));
       }
     } catch (error: any) {
-      // Silently handle 401 errors (user not logged in or session expired)
       if (error?.response?.status !== 401) {
         console.error(error);
       }
-      // Set empty enrollments if fetch fails
       dispatch(setEnrollments([]));
     }
   };
@@ -113,12 +110,9 @@ export default function Dashboard() {
       } else {
         await client.enrollUserInCourse(courseId);
       }
-      // Refresh enrollments from server to ensure consistency
-      // This will override any optimistic updates with server state
       await fetchEnrollments();
     } catch (error: any) {
       console.error("Error handling enrollment:", error);
-      // Re-fetch enrollments to get current server state
       await fetchEnrollments();
     }
   };
@@ -134,9 +128,7 @@ export default function Dashboard() {
   const onDeleteCourse = async (courseId: string) => {
     try {
       await client.deleteCourse(courseId);
-      // Refresh courses from server to ensure consistency
       await fetchCourses();
-      // Also refresh enrollments if user is logged in
       if (currentUser) {
         await fetchEnrollments();
       }

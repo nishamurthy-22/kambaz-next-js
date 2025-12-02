@@ -79,7 +79,6 @@ export const updateAssignment = async (assignment: any) => {
   return data;
 };
 
-// Enrollment functions using new route format: /api/users/:uid/courses/:cid
 export const enrollUserInCourse = async (courseId: string) => {
   const { data } = await axiosWithCredentials.post(
     `${USERS_API}/current/courses/${courseId}`
@@ -98,7 +97,6 @@ export const findEnrollmentsForUser = async () => {
   return data;
 };
 
-// Enrollment functions for specific user (admin/faculty use case)
 export const enrollIntoCourse = async (userId: string, courseId: string) => {
  const response = await axiosWithCredentials.post(`${USERS_API}/${userId}/courses/${courseId}`);
  return response.data;

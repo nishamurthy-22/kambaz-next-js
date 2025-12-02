@@ -124,11 +124,9 @@ export default function PeopleTablePage() {
             handleEdit(user);
           } : undefined}
           onDelete={async () => {
-            // Refresh users list after deletion
             await fetchUsers();
           }}
           onUpdate={async () => {
-            // Refresh users list after update
             await fetchUsers();
           }}
         />

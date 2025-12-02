@@ -127,7 +127,6 @@ export default function AssignmentEditor() {
       await client.updateAssignment(updatedAssignment);
     }
     
-    // Refresh assignments from server to ensure consistency
     if (cid) {
       const fetchedAssignments = await client.findAssignmentsForCourse(cid as string);
       dispatch(setAssignments(fetchedAssignments));

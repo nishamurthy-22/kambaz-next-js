@@ -14,7 +14,6 @@ export default function Users() {
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const isAdmin = (currentUser as any)?.role === "ADMIN";
 
-  // Restrict access to admins only
   useEffect(() => {
     if (currentUser && !isAdmin) {
       router.push("/Account/Profile");
