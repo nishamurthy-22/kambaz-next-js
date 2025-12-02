@@ -123,6 +123,10 @@ export default function PeopleTablePage() {
             setShowUserId(null);
             handleEdit(user);
           } : undefined}
+          onDelete={async () => {
+            // Refresh users list after deletion
+            await fetchUsers();
+          }}
         />
       )}
       <div id="wd-people-table" style={{ marginRight: showDetails ? "25%" : "0" }}>

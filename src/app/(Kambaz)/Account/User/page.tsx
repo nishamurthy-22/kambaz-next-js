@@ -85,6 +85,10 @@ export default function Users() {
             setShowDetails(false);
             setShowUserId(null);
           }}
+          onDelete={async () => {
+            // Refresh users list after deletion
+            await fetchUsers();
+          }}
         />
       )}
       <div style={{ marginRight: showDetails ? "25%" : "0" }}>
