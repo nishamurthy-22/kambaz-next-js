@@ -24,13 +24,16 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
     (e: any) => String(e.user) === String(userId) && String(e.course) === String(cid)
   );
 
+  // Faculty can access any course, students can only access enrolled courses
+  const canAccessCourse = isFaculty ? true : isEnrolled;
+
   useEffect(() => {
-    if (currentUser && !isFaculty && !isEnrolled) {
+    if (currentUser && !canAccessCourse) {
       router.push("/Dashboard");
     }
-  }, [currentUser, isFaculty, isEnrolled, router, cid]);
+  }, [currentUser, canAccessCourse, router]);
 
-  if (currentUser && !isFaculty && !isEnrolled) {
+  if (currentUser && !canAccessCourse) {
     return null;
   }
 
