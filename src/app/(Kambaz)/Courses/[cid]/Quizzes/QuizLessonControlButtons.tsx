@@ -1,5 +1,5 @@
 "use client";
-import { IoEllipsisVertical } from "react-icons/io5";
+import { IoEllipsisVertical, IoBan } from "react-icons/io5";
 import { FaTrash } from "react-icons/fa";
 import GreenCheckmark from "../Modules/GreenCheckmark";
 
@@ -24,7 +24,7 @@ export default function QuizLessonControlButtons({
         }}
         style={{ fontSize: "1.2rem", border: "none", background: "none" }}
       >
-        {published ? "✅" : "🚫"}
+        {published ? <GreenCheckmark /> : <IoBan className="text-danger" style={{ fontSize: "1.2rem" }} />}
       </button>
       <FaTrash 
         className="text-danger me-2 mb-1" 
@@ -33,7 +33,6 @@ export default function QuizLessonControlButtons({
           onDeleteClick(quizId);
         }}
       />
-      <GreenCheckmark />
       <IoEllipsisVertical className="fs-4" />
     </div>
   );
