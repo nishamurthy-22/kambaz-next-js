@@ -33,7 +33,12 @@ export default function Quizzes() {
     fetchQuizzes();
   }, [cid]);
 
-  const courseQuizzes = quizzes.filter((q: any) => q.course === cid) as any[];
+  // Filter quizzes: Faculty see all, Students see only published
+  const courseQuizzes = quizzes.filter((q: any) => {
+    if (q.course !== cid) return false;
+    if (isFaculty) return true; // Faculty see all quizzes
+    return q.published === true; // Students see only published quizzes
+  }) as any[];
 
   const handleAddQuiz = async () => {
     const newQuiz = {
@@ -115,7 +120,7 @@ export default function Quizzes() {
 
   return (
     <div>
-      <QuizControls onAddQuiz={handleAddQuiz} />
+      {isFaculty && <QuizControls onAddQuiz={handleAddQuiz} />}
       <br />
       <br />
 
@@ -138,7 +143,9 @@ export default function Quizzes() {
             {courseQuizzes.length === 0 ? (
               <ListGroupItem className="wd-lesson p-3 ps-1">
                 <div className="text-muted text-center">
-                  No quizzes yet. Click the "+ Quiz" button to create a new quiz.
+                  {isFaculty 
+                    ? 'No quizzes yet. Click the "+ Quiz" button to create a new quiz.'
+                    : 'No quizzes available yet.'}
                 </div>
               </ListGroupItem>
             ) : (

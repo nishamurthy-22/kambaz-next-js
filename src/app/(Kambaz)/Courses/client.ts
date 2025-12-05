@@ -134,3 +134,62 @@ export const updateQuiz = async (quiz: any) => {
   const { data } = await axios.put(`${QUIZZES_API}/${quiz._id}`, quiz);
   return data;
 };
+
+// Quiz Attempts API - Database-backed persistence
+export const startQuizAttempt = async (quizId: string) => {
+  const response = await axiosWithCredentials.post(
+    `${QUIZZES_API}/${quizId}/attempts/start`
+  );
+  return response.data;
+};
+
+export const updateQuizAttemptAnswers = async (attemptId: string, answers: any) => {
+  const response = await axiosWithCredentials.put(
+    `${HTTP_SERVER}/api/attempts/${attemptId}/update`,
+    { answers }
+  );
+  return response.data;
+};
+
+export const submitQuizAttempt = async (attemptId: string, data: any) => {
+  const response = await axiosWithCredentials.post(
+    `${HTTP_SERVER}/api/attempts/${attemptId}/submit`,
+    data
+  );
+  return response.data;
+};
+
+export const getInProgressAttempt = async (quizId: string) => {
+  const response = await axiosWithCredentials.get(
+    `${QUIZZES_API}/${quizId}/attempts/in-progress`
+  );
+  return response.data;
+};
+
+export const getQuizAttempts = async (quizId: string) => {
+  const response = await axiosWithCredentials.get(
+    `${QUIZZES_API}/${quizId}/attempts`
+  );
+  return response.data;
+};
+
+export const getQuizAttemptCount = async (quizId: string) => {
+  const response = await axiosWithCredentials.get(
+    `${QUIZZES_API}/${quizId}/attempts/count`
+  );
+  return response.data;
+};
+
+export const getLatestQuizAttempt = async (quizId: string) => {
+  const response = await axiosWithCredentials.get(
+    `${QUIZZES_API}/${quizId}/attempts/latest`
+  );
+  return response.data;
+};
+
+export const getQuizAttemptById = async (attemptId: string) => {
+  const response = await axiosWithCredentials.get(
+    `${HTTP_SERVER}/api/attempts/${attemptId}`
+  );
+  return response.data;
+};
