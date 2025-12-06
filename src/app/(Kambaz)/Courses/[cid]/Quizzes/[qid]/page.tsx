@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../../../store";
 import { setQuizzes, updateQuiz } from "../reducer";
 import * as client from "../../../client";
-import { Button, Table, Dropdown } from "react-bootstrap";
+import { Button, Table, Dropdown, Alert } from "react-bootstrap";
 import { IoEllipsisVertical } from "react-icons/io5";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import DeleteConfirmationDialog from "../../Assignments/DeleteConfirmationDialog";
@@ -21,6 +21,7 @@ export default function QuizDetails() {
   const isNew = qid === "new";
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const fetchQuizzes = async () => {
     if (cid) {
@@ -46,7 +47,98 @@ export default function QuizDetails() {
     }
   };
 
+  const validateQuizForPublish = (quizToValidate: any): string[] => {
+    const errors: string[] = [];
+
+    if (!quizToValidate.title || quizToValidate.title.trim() === "") {
+      errors.push("Quiz must have a title");
+    }
+
+    if (!quizToValidate.questions || quizToValidate.questions.length === 0) {
+      errors.push("Quiz must have at least one question");
+    }
+
+    quizToValidate.questions?.forEach((q: any, index: number) => {
+      if (!q.question || q.question.trim() === "") {
+        errors.push(`Question ${index + 1} is missing question text`);
+      }
+      if (q.type === "MULTIPLE_CHOICE") {
+        if (!q.choices || q.choices.length < 2) {
+          errors.push(`Question ${index + 1} must have at least 2 choices`);
+        }
+        const hasEmptyChoice = q.choices?.some((c: string) => !c || c.trim() === "");
+        if (hasEmptyChoice) {
+          errors.push(`Question ${index + 1} has empty choices`);
+        }
+        if (!q.correctAnswer) {
+          errors.push(`Question ${index + 1} must have a correct answer selected`);
+        }
+      }
+      if (q.type === "TRUE_FALSE") {
+        if (q.correctAnswer === undefined || q.correctAnswer === null) {
+          errors.push(`Question ${index + 1} must have a correct answer selected`);
+        }
+      }
+      if (q.type === "FILL_BLANK") {
+        if (!q.blanks || !Array.isArray(q.blanks) || q.blanks.length === 0) {
+          errors.push(`Question ${index + 1} must have at least one blank`);
+        } else {
+          q.blanks.forEach((blank: any, blankIndex: number) => {
+            if (!blank.possibleAnswers || blank.possibleAnswers.length === 0) {
+              errors.push(`Question ${index + 1}, Blank ${blankIndex + 1} must have at least one possible answer`);
+            }
+            const hasEmptyAnswer = blank.possibleAnswers?.some((a: string) => !a || a.trim() === "");
+            if (hasEmptyAnswer) {
+              errors.push(`Question ${index + 1}, Blank ${blankIndex + 1} has empty answers`);
+            }
+          });
+        }
+      }
+    });
+
+    if (!quizToValidate["Available Date"] || quizToValidate["Available Date"].trim() === "") {
+      errors.push("'Available From' date is required");
+    }
+
+    if (!quizToValidate["Due Date"] || quizToValidate["Due Date"].trim() === "") {
+      errors.push("'Due Date' is required");
+    }
+
+    if (!quizToValidate["Available Until Date"] || quizToValidate["Available Until Date"].trim() === "") {
+      errors.push("'Until' date is required");
+    }
+
+    const availableDate = quizToValidate["Available Date"] ? new Date(quizToValidate["Available Date"]) : null;
+    const availableUntilDate = quizToValidate["Available Until Date"] ? new Date(quizToValidate["Available Until Date"]) : null;
+    const dueDate = quizToValidate["Due Date"] ? new Date(quizToValidate["Due Date"]) : null;
+
+    if (availableDate && availableUntilDate && availableDate >= availableUntilDate) {
+      errors.push("'Available From' must be before 'Until' date");
+    }
+
+    if (availableDate && dueDate && availableDate > dueDate) {
+      errors.push("'Available From' must be before or equal to 'Due' date");
+    }
+
+    if (dueDate && availableUntilDate && dueDate > availableUntilDate) {
+      errors.push("'Due' date must be before or equal to 'Until' date");
+    }
+
+    return errors;
+  };
+
   const handlePublishToggle = async () => {
+    setValidationErrors([]);
+
+    if (!quiz.published) {
+      const errors = validateQuizForPublish(quiz);
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
     try {
       const updatedQuiz = { ...quiz, published: !quiz.published };
       await client.updateQuiz(updatedQuiz);
@@ -67,6 +159,26 @@ export default function QuizDetails() {
 
   return (
     <div className="wd-quiz-details" style={{ maxWidth: "800px" }}>
+      {validationErrors.length > 0 && (
+        <Alert variant="danger" dismissible onClose={() => setValidationErrors([])}>
+          <Alert.Heading>Cannot Publish Quiz</Alert.Heading>
+          <p className="mb-2">Please fix the following issues before publishing:</p>
+          <ul className="mb-0">
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+          <Button 
+            variant="primary" 
+            size="sm" 
+            className="mt-3"
+            onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/Edit`)}
+          >
+            Edit Quiz
+          </Button>
+        </Alert>
+      )}
+
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>{quiz.title}</h2>
         {isFaculty && (

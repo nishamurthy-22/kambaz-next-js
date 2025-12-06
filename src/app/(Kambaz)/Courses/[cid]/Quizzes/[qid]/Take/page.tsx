@@ -26,6 +26,7 @@ export default function TakeQuiz() {
   const [submittedAttempt, setSubmittedAttempt] = useState<any>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [shuffledChoices, setShuffledChoices] = useState<{ [key: string]: string[] }>({});
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,6 +55,15 @@ export default function TakeQuiz() {
     }
   };
 
+  const shuffleArray = (array: any[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const initializeQuiz = async () => {
     setIsLoading(true);
     await fetchQuizzes();
@@ -65,14 +75,6 @@ export default function TakeQuiz() {
         savedAnswers[ans.question] = ans.answer;
       });
       setAnswers(savedAnswers);
-
-      if (quiz?.hasTimeLimit !== false) {
-        const startTime = new Date(inProgressAttempt.startedAt);
-        const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
-        const timeLimitSeconds = (quiz?.timeLimit || 20) * 60;
-        const remaining = Math.max(0, timeLimitSeconds - elapsed);
-        setTimeRemaining(remaining);
-      }
     }
     
     setIsLoading(false);
@@ -87,12 +89,31 @@ export default function TakeQuiz() {
     if (foundQuiz) {
       setQuiz(foundQuiz);
       
+      // Shuffle choices for MCQ questions if shuffle is enabled
+      if (foundQuiz.shuffleAnswers && foundQuiz.questions) {
+        const shuffled: { [key: string]: string[] } = {};
+        foundQuiz.questions.forEach((q: any) => {
+          if (q.type === "MULTIPLE_CHOICE" && q.choices) {
+            shuffled[q._id] = shuffleArray(q.choices);
+          }
+        });
+        setShuffledChoices(shuffled);
+      }
+      
       if (!currentAttempt && foundQuiz.hasTimeLimit !== false) {
-        const timeLimitMinutes = foundQuiz.timeLimit || 20;
+        const timeLimitMinutes = foundQuiz.timeLimit;
         setTimeRemaining(timeLimitMinutes * 60);
       }
+      
+      if (currentAttempt && foundQuiz.hasTimeLimit !== false) {
+        const startTime = new Date(currentAttempt.startedAt);
+        const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        const timeLimitSeconds = foundQuiz.timeLimit * 60;
+        const remaining = Math.max(0, timeLimitSeconds - elapsed);
+        setTimeRemaining(remaining);
+      }
     }
-  }, [quizzes, qid]);
+  }, [quizzes, qid, currentAttempt]);
 
   useEffect(() => {
     if (!currentAttempt || showResults) return;
@@ -222,6 +243,11 @@ export default function TakeQuiz() {
       gradedAnswer = submittedAttempt.answers?.find((a: any) => a.question === question._id);
     }
 
+    // Get choices - either shuffled or original
+    const displayChoices = quiz.shuffleAnswers && shuffledChoices[question._id]
+      ? shuffledChoices[question._id]
+      : question.choices;
+
     return (
       <Card className="mb-4" key={question._id}>
         <Card.Body>
@@ -242,8 +268,8 @@ export default function TakeQuiz() {
 
           {question.type === "MULTIPLE_CHOICE" && (
             <div>
-              {question.choices?.map((choice: string, choiceIndex: number) => {
-                const isSelected = answers[question._id] === choiceIndex;
+              {displayChoices?.map((choice: string, choiceIndex: number) => {
+                const isSelected = answers[question._id] === choice;
 
                 return (
                   <Form.Check
@@ -253,7 +279,7 @@ export default function TakeQuiz() {
                     id={`question-${question._id}-choice-${choiceIndex}`}
                     label={choice}
                     checked={isSelected}
-                    onChange={() => handleAnswerChange(question._id, choiceIndex)}
+                    onChange={() => handleAnswerChange(question._id, choice)}
                     disabled={isViewingResults}
                     className="mb-2"
                   />
@@ -362,18 +388,156 @@ export default function TakeQuiz() {
     return <Alert variant="danger">This quiz is no longer available.</Alert>;
   }
 
-  if (!canTakeQuiz && !currentAttempt) {
+  if (!canTakeQuiz && !currentAttempt && latestAttempt) {
     return (
-      <Alert variant="warning">
-        <h4>No Attempts Remaining</h4>
-        <p>You have used all {quiz.attemptsAllowed} attempts for this quiz.</p>
-        {latestAttempt && (
-          <p>Your last score: {latestAttempt.score} / {latestAttempt.totalPoints}</p>
-        )}
-        <Button variant="primary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}`)}>
-          Back to Quiz Details
-        </Button>
-      </Alert>
+      <div className="wd-take-quiz" style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <Alert variant="warning" className="mb-4">
+          <h4>No Attempts Remaining</h4>
+          <p>You have used all {quiz.attemptsAllowed} attempts for this quiz.</p>
+          <p className="mb-0">Below are the results from your last attempt.</p>
+        </Alert>
+
+        <Alert variant={latestAttempt.score >= (quiz.points || 0) * 0.7 ? "success" : "warning"} className="mb-4">
+          <h4>Your Last Attempt Results</h4>
+          <div className="fs-3">
+            <strong>Score: {latestAttempt.score} / {latestAttempt.totalPoints}</strong>
+            <span className="ms-3">
+              ({((latestAttempt.score / (latestAttempt.totalPoints || 1)) * 100).toFixed(1)}%)
+            </span>
+          </div>
+          <div className="mt-2">Submitted: {new Date(latestAttempt.submittedAt).toLocaleString()}</div>
+        </Alert>
+
+        {questions.map((question: any, index: number) => {
+          const gradedAnswer = latestAttempt.answers?.find((a: any) => a.question === question._id);
+          const userAnswer = gradedAnswer?.answer;
+          
+          const questionAnswers: { [key: string]: any } = {};
+          if (userAnswer !== undefined) {
+            questionAnswers[question._id] = userAnswer;
+          }
+          
+          return (
+            <Card className="mb-4" key={question._id}>
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-start mb-3">
+                  <h5>
+                    Question {index + 1}
+                    {gradedAnswer && (
+                      <span className={`ms-2 ${gradedAnswer.correct ? "text-success" : gradedAnswer.points > 0 ? "text-warning" : "text-danger"}`}>
+                        {gradedAnswer.correct ? <FaCheck /> : gradedAnswer.points > 0 ? "◐" : <FaTimes />}
+                      </span>
+                    )}
+                  </h5>
+                  <span className="badge bg-secondary">{question.points || 1} pts</span>
+                </div>
+
+                {question.title && <div className="fw-bold mb-2">{question.title}</div>}
+                <div className="mb-3">{question.question}</div>
+
+                {question.type === "MULTIPLE_CHOICE" && (
+                  <div>
+                    {question.choices?.map((choice: string, choiceIndex: number) => {
+                      const isSelected = questionAnswers[question._id] === choice;
+
+                      return (
+                        <Form.Check
+                          key={choiceIndex}
+                          type="radio"
+                          name={`question-${question._id}`}
+                          id={`question-${question._id}-choice-${choiceIndex}`}
+                          label={choice}
+                          checked={isSelected}
+                          disabled={true}
+                          className="mb-2"
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {question.type === "TRUE_FALSE" && (
+                  <div>
+                    <Form.Check
+                      type="radio"
+                      name={`question-${question._id}`}
+                      id={`question-${question._id}-true`}
+                      label="True"
+                      checked={questionAnswers[question._id] === true}
+                      disabled={true}
+                      className="mb-2"
+                    />
+                    <Form.Check
+                      type="radio"
+                      name={`question-${question._id}`}
+                      id={`question-${question._id}-false`}
+                      label="False"
+                      checked={questionAnswers[question._id] === false}
+                      disabled={true}
+                      className="mb-2"
+                    />
+                  </div>
+                )}
+
+                {question.type === "FILL_BLANK" && (
+                  <div>
+                    {(!question.blanks || question.blanks.length === 0) ? (
+                      <Form.Control
+                        type="text"
+                        value={questionAnswers[question._id] || ""}
+                        disabled={true}
+                        placeholder="Type your answer here..."
+                      />
+                    ) : (
+                      <>
+                        {question.blanks.map((blank: any, blankIndex: number) => {
+                          const userAnswersArray = Array.isArray(questionAnswers[question._id]) 
+                            ? questionAnswers[question._id] 
+                            : [];
+                          
+                          return (
+                            <div key={blankIndex} className="mb-3">
+                              <Form.Label>
+                                Blank {blankIndex + 1} 
+                                <span className="text-muted ms-2">({blank.points || 0} pts)</span>
+                              </Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={userAnswersArray[blankIndex] || ""}
+                                disabled={true}
+                                placeholder={`Answer for blank ${blankIndex + 1}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                    {gradedAnswer && (
+                      <Alert 
+                        variant={gradedAnswer.points === question.points ? "success" : gradedAnswer.points > 0 ? "warning" : "danger"} 
+                        className="py-2 mt-2"
+                      >
+                        <small>
+                          <strong>Your Score:</strong> {gradedAnswer.points} / {question.points} pts
+                          {gradedAnswer.points > 0 && gradedAnswer.points < question.points && (
+                            <span className="ms-2">(Partial Credit)</span>
+                          )}
+                        </small>
+                      </Alert>
+                    )}
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          );
+        })}
+
+        <div className="d-flex justify-content-end mt-4 border-top pt-4">
+          <Button variant="primary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}`)}>
+            Back to Quiz Details
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -399,7 +563,7 @@ export default function TakeQuiz() {
               <div><strong>Questions:</strong> {questions.length}</div>
               <div>
                 <strong>Time Limit:</strong>{" "}
-                {quiz.hasTimeLimit === false ? "No Time Limit" : `${quiz.timeLimit || 20} Minutes`}
+                {quiz.hasTimeLimit === false ? "No Time Limit" : `${quiz.timeLimit} Minutes`}
               </div>
               <div><strong>Attempts Remaining:</strong> {attemptsRemaining}</div>
             </div>

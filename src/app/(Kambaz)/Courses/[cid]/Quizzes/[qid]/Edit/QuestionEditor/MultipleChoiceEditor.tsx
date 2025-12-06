@@ -23,7 +23,9 @@ export default function MultipleChoiceEditor({
       ? question.choices
       : ["", "", "", ""]
   );
-  const [correctChoice, setCorrectChoice] = useState(question.correctChoice || 0);
+  const [correctAnswer, setCorrectAnswer] = useState(
+    question.correctAnswer || (question.choices?.[question.correctChoice || 0]) || ""
+  );
 
   useEffect(() => {
     setTitle(question.title || "");
@@ -34,13 +36,21 @@ export default function MultipleChoiceEditor({
         ? question.choices
         : ["", "", "", ""]
     );
-    setCorrectChoice(question.correctChoice || 0);
+    setCorrectAnswer(
+      question.correctAnswer || (question.choices?.[question.correctChoice || 0]) || ""
+    );
   }, [question._id]);
 
   const handleChoiceChange = (index: number, value: string) => {
     const newChoices = [...choices];
+    const oldValue = newChoices[index];
     newChoices[index] = value;
     setChoices(newChoices);
+    
+    // If the correct answer was the old value, update it to the new value
+    if (correctAnswer === oldValue) {
+      setCorrectAnswer(value);
+    }
   };
 
   const handleAddChoice = () => {
@@ -52,13 +62,14 @@ export default function MultipleChoiceEditor({
       alert("Must have at least 2 choices");
       return;
     }
+    
+    const removedChoice = choices[index];
     const newChoices = choices.filter((_, i) => i !== index);
     setChoices(newChoices);
     
-    if (index === correctChoice) {
-      setCorrectChoice(0);
-    } else if (index < correctChoice) {
-      setCorrectChoice(correctChoice - 1);
+    // If the removed choice was the correct answer, reset to first choice
+    if (correctAnswer === removedChoice) {
+      setCorrectAnswer(newChoices[0] || "");
     }
   };
 
@@ -69,7 +80,7 @@ export default function MultipleChoiceEditor({
       question: questionText,
       points,
       choices,
-      correctChoice,
+      correctAnswer,
       type: "MULTIPLE_CHOICE"
     };
     
@@ -124,13 +135,13 @@ export default function MultipleChoiceEditor({
             <div key={index} className="d-flex align-items-center mb-2">
               <div
                 className={`me-2 d-flex align-items-center justify-content-center rounded-circle border ${
-                  correctChoice === index ? "bg-success text-white border-success" : "bg-white"
+                  correctAnswer === choice ? "bg-success text-white border-success" : "bg-white"
                 }`}
                 style={{ width: "30px", height: "30px", cursor: "pointer" }}
-                onClick={() => setCorrectChoice(index)}
+                onClick={() => setCorrectAnswer(choice)}
                 title="Click to mark as correct answer"
               >
-                {correctChoice === index && <FaCheck />}
+                {correctAnswer === choice && <FaCheck />}
               </div>
               <Form.Control
                 type="text"

@@ -1,6 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
+
 const axiosWithCredentials = axios.create({ withCredentials: true });
+
+// Add response interceptor to handle 401 errors
+axiosWithCredentials.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Session expired or not logged in
+      if (typeof window !== 'undefined') {
+        alert("Your session has expired. Please sign in again.");
+        window.location.href = "/Account/Signin";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 const HTTP_SERVER = process.env.NEXT_PUBLIC_HTTP_SERVER;
 const COURSES_API = `${HTTP_SERVER}/api/courses`;
 const USERS_API = `${HTTP_SERVER}/api/users`;
@@ -112,12 +129,12 @@ export const findUsersForCourse = async (courseId: string) => {
 };
 
 export const findQuizzesForCourse = async (courseId: string) => {
-  const response = await axios.get(`${COURSES_API}/${courseId}/quizzes`);
+  const response = await axiosWithCredentials.get(`${COURSES_API}/${courseId}/quizzes`);
   return response.data;
 };
 
 export const createQuizForCourse = async (courseId: string, quiz: any) => {
-  const response = await axios.post(
+  const response = await axiosWithCredentials.post(
     `${COURSES_API}/${courseId}/quizzes`,
     quiz
   );
@@ -126,12 +143,12 @@ export const createQuizForCourse = async (courseId: string, quiz: any) => {
 
 const QUIZZES_API = `${HTTP_SERVER}/api/quizzes`;
 export const deleteQuiz = async (quizId: string) => {
-  const response = await axios.delete(`${QUIZZES_API}/${quizId}`);
+  const response = await axiosWithCredentials.delete(`${QUIZZES_API}/${quizId}`);
   return response.data;
 };
 
 export const updateQuiz = async (quiz: any) => {
-  const { data } = await axios.put(`${QUIZZES_API}/${quiz._id}`, quiz);
+  const { data } = await axiosWithCredentials.put(`${QUIZZES_API}/${quiz._id}`, quiz);
   return data;
 };
 

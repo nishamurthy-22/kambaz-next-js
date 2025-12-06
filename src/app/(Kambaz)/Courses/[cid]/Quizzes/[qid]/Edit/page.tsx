@@ -23,6 +23,9 @@ export default function QuizEditor() {
   const fetchQuizzes = async () => {
     if (cid) {
       const fetchedQuizzes = await client.findQuizzesForCourse(cid as string);
+      console.log("===== FETCHED QUIZZES FROM DATABASE =====");
+      console.log("Quizzes:", JSON.stringify(fetchedQuizzes, null, 2));
+      console.log("=========================================");
       dispatch(setQuizzes(fetchedQuizzes));
     }
   };
@@ -34,6 +37,9 @@ export default function QuizEditor() {
   useEffect(() => {
     const foundQuiz = quizzes.find((q: any) => q._id === qid);
     if (foundQuiz) {
+      console.log("===== FOUND QUIZ IN REDUX =====");
+      console.log("Quiz:", JSON.stringify(foundQuiz, null, 2));
+      console.log("================================");
       setQuiz(foundQuiz);
       setFormData({
         ...foundQuiz,
@@ -48,25 +54,31 @@ export default function QuizEditor() {
   };
 
   const handleQuestionsChange = (questions: any[]) => {
+    console.log("===== HANDLE QUESTIONS CHANGE =====");
+    console.log("Received questions:", JSON.stringify(questions, null, 2));
+    
     const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
-    setFormData({
+    const updatedFormData = {
       ...formData,
       questions,
       points: totalPoints,
       "Questions": questions.length
-    });
+    };
+    
+    console.log("Updated formData:", JSON.stringify(updatedFormData, null, 2));
+    console.log("===================================");
+    
+    setFormData(updatedFormData);
     setValidationErrors([]);
   };
 
   const validateQuizForPublish = (): string[] => {
     const errors: string[] = [];
 
-    // Title validation
     if (!formData.title || formData.title.trim() === "") {
       errors.push("Quiz must have a title before publishing");
     }
 
-    // Questions validation
     if (!formData.questions || formData.questions.length === 0) {
       errors.push("Quiz must have at least one question before publishing");
     }
@@ -85,22 +97,10 @@ export default function QuizEditor() {
         }
       }
       if (q.type === "FILL_BLANK") {
-        console.log(`===== VALIDATION DEBUG for Question ${index + 1} =====`);
-        console.log("Question blanks:", JSON.stringify(q.blanks, null, 2));
-        console.log("Has blanks:", !!q.blanks);
-        console.log("Is array:", Array.isArray(q.blanks));
-        console.log("Blanks length:", q.blanks?.length);
-        
-        // Only support multi-blank format
         if (!q.blanks || !Array.isArray(q.blanks) || q.blanks.length === 0) {
           errors.push(`Question ${index + 1} must have at least one blank`);
         } else {
           q.blanks.forEach((blank: any, blankIndex: number) => {
-            console.log(`  Blank ${blankIndex + 1}:`, JSON.stringify(blank, null, 2));
-            console.log(`  Has possibleAnswers:`, !!blank.possibleAnswers);
-            console.log(`  possibleAnswers length:`, blank.possibleAnswers?.length);
-            console.log(`  possibleAnswers values:`, blank.possibleAnswers);
-            
             if (!blank.possibleAnswers || blank.possibleAnswers.length === 0) {
               errors.push(`Question ${index + 1}, Blank ${blankIndex + 1} must have at least one possible answer`);
             }
@@ -110,11 +110,9 @@ export default function QuizEditor() {
             }
           });
         }
-        console.log("=================================================");
       }
     });
 
-    // Date validation - All three dates are required for publishing
     if (!formData["Available Date"] || formData["Available Date"].trim() === "") {
       errors.push("'Available From' date is required before publishing");
     }
@@ -127,7 +125,6 @@ export default function QuizEditor() {
       errors.push("'Until' date is required before publishing");
     }
 
-    // Date order validation (only if all dates are provided)
     const availableDate = formData["Available Date"] ? new Date(formData["Available Date"]) : null;
     const availableUntilDate = formData["Available Until Date"] ? new Date(formData["Available Until Date"]) : null;
     const dueDate = formData["Due Date"] ? new Date(formData["Due Date"]) : null;
@@ -162,8 +159,15 @@ export default function QuizEditor() {
   const handleSave = async () => {
     setValidationErrors([]);
 
+    console.log("===== HANDLE SAVE - FORMDATA BEING SENT =====");
+    console.log(JSON.stringify(formData, null, 2));
+    console.log("=============================================");
+
     try {
       const updatedQuiz = await client.updateQuiz(formData);
+      console.log("===== RESPONSE FROM SERVER =====");
+      console.log(JSON.stringify(updatedQuiz, null, 2));
+      console.log("================================");
       dispatch(updateQuiz(updatedQuiz));
       router.push(`/Courses/${cid}/Quizzes/${qid}`);
     } catch (error) {
@@ -185,7 +189,17 @@ export default function QuizEditor() {
     }
 
     try {
-      const updatedQuiz = await client.updateQuiz({ ...formData, published: true });
+      const dataToSend = { ...formData, published: true };
+      console.log("===== SENDING TO SERVER =====");
+      console.log(JSON.stringify(dataToSend, null, 2));
+      console.log("=============================");
+      
+      const updatedQuiz = await client.updateQuiz(dataToSend);
+      
+      console.log("===== RESPONSE FROM SERVER =====");
+      console.log(JSON.stringify(updatedQuiz, null, 2));
+      console.log("================================");
+      
       dispatch(updateQuiz(updatedQuiz));
       router.push(`/Courses/${cid}/Quizzes`);
     } catch (error) {
