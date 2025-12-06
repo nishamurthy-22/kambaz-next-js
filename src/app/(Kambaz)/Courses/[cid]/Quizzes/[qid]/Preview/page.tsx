@@ -50,18 +50,53 @@ export default function QuizPreview() {
     setAnswers({ ...answers, [questionId]: answer });
   };
 
+  const checkFillBlankAnswer = (question: any, userAnswers: any) => {
+    if (!question.blanks || question.blanks.length === 0) {
+      // Legacy single blank
+      if (!userAnswers) return { correct: false, points: 0 };
+      const userAnswer = question.caseSensitive ? userAnswers : userAnswers.toLowerCase();
+      const isCorrect = question.possibleAnswers?.some((possibleAnswer: string) => {
+        const checkAnswer = question.caseSensitive ? possibleAnswer : possibleAnswer.toLowerCase();
+        return userAnswer.trim() === checkAnswer.trim();
+      });
+      return { correct: isCorrect, points: isCorrect ? (question.points || 0) : 0 };
+    }
+
+    // Multi-blank with partial credit
+    const answersArray = Array.isArray(userAnswers) ? userAnswers : [];
+    let totalPoints = 0;
+    let allCorrect = true;
+
+    question.blanks.forEach((blank: any, index: number) => {
+      const userAnswer = answersArray[index] || "";
+      if (!userAnswer) {
+        allCorrect = false;
+        return;
+      }
+
+      const answerToCheck = blank.caseSensitive ? userAnswer : userAnswer.toLowerCase();
+      const isCorrect = blank.possibleAnswers?.some((possibleAnswer: string) => {
+        const checkAnswer = blank.caseSensitive ? possibleAnswer : possibleAnswer.toLowerCase();
+        return answerToCheck.trim() === checkAnswer.trim();
+      });
+
+      if (isCorrect) {
+        totalPoints += blank.points || 0;
+      } else {
+        allCorrect = false;
+      }
+    });
+
+    return { correct: allCorrect, points: totalPoints };
+  };
+
   const checkAnswer = (question: any, answer: any): boolean => {
     if (question.type === "MULTIPLE_CHOICE") {
       return answer === question.correctChoice;
     } else if (question.type === "TRUE_FALSE") {
       return answer === question.correctAnswer;
     } else if (question.type === "FILL_BLANK") {
-      if (!answer) return false;
-      const userAnswer = question.caseSensitive ? answer : answer.toLowerCase();
-      return question.possibleAnswers.some((possibleAnswer: string) => {
-        const checkAnswer = question.caseSensitive ? possibleAnswer : possibleAnswer.toLowerCase();
-        return userAnswer === checkAnswer;
-      });
+      return checkFillBlankAnswer(question, answer).correct;
     }
     return false;
   };
@@ -69,7 +104,10 @@ export default function QuizPreview() {
   const calculateScore = () => {
     let totalScore = 0;
     questions.forEach((question: any) => {
-      if (checkAnswer(question, answers[question._id])) {
+      if (question.type === "FILL_BLANK") {
+        const result = checkFillBlankAnswer(question, answers[question._id]);
+        totalScore += result.points;
+      } else if (checkAnswer(question, answers[question._id])) {
         totalScore += question.points || 0;
       }
     });
@@ -95,7 +133,14 @@ export default function QuizPreview() {
   };
 
   const renderQuestion = (question: any, index: number) => {
-    const isCorrect = showResults ? checkAnswer(question, answers[question._id]) : null;
+    let fillBlankResult = null;
+    if (question.type === "FILL_BLANK" && showResults) {
+      fillBlankResult = checkFillBlankAnswer(question, answers[question._id]);
+    }
+    
+    const isCorrect = showResults 
+      ? (question.type === "FILL_BLANK" ? fillBlankResult?.correct : checkAnswer(question, answers[question._id]))
+      : null;
 
     return (
       <Card className="mb-4" key={question._id}>
@@ -104,8 +149,8 @@ export default function QuizPreview() {
             <h5>
               Question {index + 1}
               {showResults && (
-                <span className={`ms-2 ${isCorrect ? "text-success" : "text-danger"}`}>
-                  {isCorrect ? <FaCheck /> : <FaTimes />}
+                <span className={`ms-2 ${isCorrect ? "text-success" : fillBlankResult && fillBlankResult.points > 0 ? "text-warning" : "text-danger"}`}>
+                  {isCorrect ? <FaCheck /> : fillBlankResult && fillBlankResult.points > 0 ? "◐" : <FaTimes />}
                 </span>
               )}
             </h5>
@@ -118,7 +163,6 @@ export default function QuizPreview() {
 
           <div className="mb-3">{question.question}</div>
 
-          {/* Multiple Choice */}
           {question.type === "MULTIPLE_CHOICE" && (
             <div>
               {question.choices?.map((choice: string, choiceIndex: number) => {
@@ -150,7 +194,6 @@ export default function QuizPreview() {
             </div>
           )}
 
-          {/* True/False */}
           {question.type === "TRUE_FALSE" && (
             <div>
               <Form.Check
@@ -192,28 +235,98 @@ export default function QuizPreview() {
             </div>
           )}
 
-          {/* Fill in the Blank */}
           {question.type === "FILL_BLANK" && (
             <div>
-              <Form.Control
-                type="text"
-                value={answers[question._id] || ""}
-                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                disabled={showResults}
-                placeholder="Type your answer here..."
-                className={
-                  showResults
-                    ? isCorrect
-                      ? "border-success"
-                      : "border-danger"
-                    : ""
-                }
-              />
-              {showResults && (
-                <div className="mt-2 small text-muted">
-                  <strong>Possible correct answers:</strong>{" "}
-                  {question.possibleAnswers?.join(", ")}
-                </div>
+              {(!question.blanks || question.blanks.length === 0) ? (
+                // Legacy single blank
+                <>
+                  <Form.Control
+                    type="text"
+                    value={answers[question._id] || ""}
+                    onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                    disabled={showResults}
+                    placeholder="Type your answer here..."
+                    className={
+                      showResults
+                        ? isCorrect
+                          ? "border-success"
+                          : "border-danger"
+                        : ""
+                    }
+                  />
+                  {showResults && (
+                    <div className="mt-2 small text-muted">
+                      <strong>Possible correct answers:</strong>{" "}
+                      {question.possibleAnswers?.join(", ")}
+                    </div>
+                  )}
+                </>
+              ) : (
+                // Multi-blank
+                <>
+                  {question.blanks.map((blank: any, blankIndex: number) => {
+                    const userAnswersArray = Array.isArray(answers[question._id]) 
+                      ? answers[question._id] 
+                      : [];
+                    
+                    let blankIsCorrect = false;
+                    if (showResults) {
+                      const userAnswer = userAnswersArray[blankIndex] || "";
+                      if (userAnswer) {
+                        const answerToCheck = blank.caseSensitive ? userAnswer : userAnswer.toLowerCase();
+                        blankIsCorrect = blank.possibleAnswers?.some((possibleAnswer: string) => {
+                          const checkAnswer = blank.caseSensitive ? possibleAnswer : possibleAnswer.toLowerCase();
+                          return answerToCheck.trim() === checkAnswer.trim();
+                        });
+                      }
+                    }
+                    
+                    return (
+                      <div key={blankIndex} className="mb-3">
+                        <Form.Label>
+                          Blank {blankIndex + 1} 
+                          <span className="text-muted ms-2">({blank.points || 0} pts)</span>
+                          {showResults && (
+                            <span className={`ms-2 ${blankIsCorrect ? "text-success" : "text-danger"}`}>
+                              {blankIsCorrect ? <FaCheck /> : <FaTimes />}
+                            </span>
+                          )}
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={userAnswersArray[blankIndex] || ""}
+                          onChange={(e) => {
+                            const newAnswers = [...userAnswersArray];
+                            newAnswers[blankIndex] = e.target.value;
+                            handleAnswerChange(question._id, newAnswers);
+                          }}
+                          disabled={showResults}
+                          placeholder={`Answer for blank ${blankIndex + 1}`}
+                          className={
+                            showResults
+                              ? blankIsCorrect ? "border-success" : "border-danger"
+                              : ""
+                          }
+                        />
+                        {showResults && (
+                          <Form.Text className="text-muted d-block mt-1">
+                            <strong>Possible answers:</strong> {blank.possibleAnswers?.join(", ")}
+                          </Form.Text>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {showResults && (
+                    <Alert variant={fillBlankResult?.points === question.points ? "success" : fillBlankResult?.points > 0 ? "warning" : "danger"} className="py-2 mt-2">
+                      <small>
+                        <strong>Your Score:</strong> {fillBlankResult?.points || 0} / {question.points} pts
+                        {fillBlankResult && fillBlankResult.points > 0 && fillBlankResult.points < question.points && (
+                          <span className="ms-2">(Partial Credit)</span>
+                        )}
+                      </small>
+                    </Alert>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -224,7 +337,6 @@ export default function QuizPreview() {
 
   return (
     <div className="wd-quiz-preview" style={{ maxWidth: "900px", margin: "0 auto" }}>
-      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2>{quiz.title}</h2>
@@ -240,7 +352,6 @@ export default function QuizPreview() {
         </Button>
       </div>
 
-      {/* Quiz Info */}
       <Alert variant="info" className="mb-4">
         <div className="d-flex justify-content-between">
           <div>
@@ -250,12 +361,12 @@ export default function QuizPreview() {
             <strong>Questions:</strong> {questions.length}
           </div>
           <div>
-            <strong>Time Limit:</strong> {quiz.timeLimit || 20} Minutes
+            <strong>Time Limit:</strong>{" "}
+            {quiz.hasTimeLimit === false ? "No Time Limit" : `${quiz.timeLimit || 20} Minutes`}
           </div>
         </div>
       </Alert>
 
-      {/* Quiz Instructions */}
       {quiz.description && (
         <Card className="mb-4">
           <Card.Body>
@@ -265,7 +376,6 @@ export default function QuizPreview() {
         </Card>
       )}
 
-      {/* Results Summary */}
       {showResults && (
         <Alert variant={score >= (quiz.points || 0) * 0.7 ? "success" : "warning"} className="mb-4">
           <h4>Quiz Results</h4>
@@ -278,13 +388,11 @@ export default function QuizPreview() {
         </Alert>
       )}
 
-      {/* Questions */}
       {questions.length === 0 ? (
         <Alert variant="warning">
           This quiz has no questions yet. Click "Edit Quiz" to add questions.
         </Alert>
       ) : oneQuestionAtATime && !showResults ? (
-        // One question at a time mode
         <>
           {renderQuestion(questions[currentQuestionIndex], currentQuestionIndex)}
           
@@ -313,7 +421,6 @@ export default function QuizPreview() {
           </div>
         </>
       ) : (
-        // All questions at once mode or results view
         <>
           {questions.map((question: any, index: number) =>
             renderQuestion(question, index)
@@ -329,7 +436,6 @@ export default function QuizPreview() {
         </>
       )}
 
-      {/* Back to Quiz Button (after submission) */}
       {showResults && (
         <div className="d-flex justify-content-between mt-4 border-top pt-4">
           <Button

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Form, Button } from "react-bootstrap";
+import { Form, Button, Alert, Card } from "react-bootstrap";
 import { BsTrash } from "react-icons/bs";
 
 interface FillBlankEditorProps {
@@ -19,41 +19,103 @@ export default function FillBlankEditor({
     onChange({ ...question, [field]: value });
   };
 
-  const handleAnswerChange = (index: number, value: string) => {
-    const newAnswers = [...(question.possibleAnswers || [""])];
-    newAnswers[index] = value;
-    onChange({ ...question, possibleAnswers: newAnswers });
+  const handleAddBlank = () => {
+    const newBlanks = [
+      ...(question.blanks || []),
+      {
+        possibleAnswers: [""],
+        points: 1,
+        caseSensitive: false
+      }
+    ];
+    
+    // Calculate total points
+    const totalPoints = newBlanks.reduce((sum, blank) => sum + (blank.points || 0), 0);
+    
+    onChange({ 
+      ...question, 
+      blanks: newBlanks,
+      points: totalPoints 
+    });
   };
 
-  const handleAddAnswer = () => {
-    const newAnswers = [...(question.possibleAnswers || []), ""];
-    onChange({ ...question, possibleAnswers: newAnswers });
-  };
-
-  const handleRemoveAnswer = (index: number) => {
-    if ((question.possibleAnswers?.length || 0) <= 1) {
-      alert("Must have at least 1 possible answer");
+  const handleRemoveBlank = (blankIndex: number) => {
+    if ((question.blanks?.length || 0) <= 1) {
+      alert("Must have at least 1 blank");
       return;
     }
-    const newAnswers = question.possibleAnswers.filter((_: any, i: number) => i !== index);
-    onChange({ ...question, possibleAnswers: newAnswers });
+    
+    const newBlanks = question.blanks.filter((_: any, i: number) => i !== blankIndex);
+    const totalPoints = newBlanks.reduce((sum: number, blank: any) => sum + (blank.points || 0), 0);
+    
+    onChange({ 
+      ...question, 
+      blanks: newBlanks,
+      points: totalPoints 
+    });
   };
+
+  const handleBlankPointsChange = (blankIndex: number, points: number) => {
+    const newBlanks = [...(question.blanks || [])];
+    newBlanks[blankIndex] = { ...newBlanks[blankIndex], points };
+    
+    const totalPoints = newBlanks.reduce((sum, blank) => sum + (blank.points || 0), 0);
+    
+    onChange({ 
+      ...question, 
+      blanks: newBlanks,
+      points: totalPoints 
+    });
+  };
+
+  const handleBlankAnswerChange = (blankIndex: number, answerIndex: number, value: string) => {
+    const newBlanks = [...(question.blanks || [])];
+    newBlanks[blankIndex].possibleAnswers[answerIndex] = value;
+    onChange({ ...question, blanks: newBlanks });
+  };
+
+  const handleAddAnswerToBlank = (blankIndex: number) => {
+    const newBlanks = [...(question.blanks || [])];
+    newBlanks[blankIndex].possibleAnswers.push("");
+    onChange({ ...question, blanks: newBlanks });
+  };
+
+  const handleRemoveAnswerFromBlank = (blankIndex: number, answerIndex: number) => {
+    const newBlanks = [...(question.blanks || [])];
+    if (newBlanks[blankIndex].possibleAnswers.length <= 1) {
+      alert("Each blank must have at least 1 possible answer");
+      return;
+    }
+    newBlanks[blankIndex].possibleAnswers = newBlanks[blankIndex].possibleAnswers.filter(
+      (_: any, i: number) => i !== answerIndex
+    );
+    onChange({ ...question, blanks: newBlanks });
+  };
+
+  const handleBlankCaseSensitiveChange = (blankIndex: number, value: boolean) => {
+    const newBlanks = [...(question.blanks || [])];
+    newBlanks[blankIndex].caseSensitive = value;
+    onChange({ ...question, blanks: newBlanks });
+  };
+
+  // Initialize with one blank if none exist
+  if (!question.blanks || question.blanks.length === 0) {
+    const initialBlanks = [{
+      possibleAnswers: [""],
+      points: 1,
+      caseSensitive: false
+    }];
+    onChange({ ...question, blanks: initialBlanks, points: 1 });
+  }
 
   return (
     <div className="border p-4 mb-3 bg-light">
       <Form>
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="mb-0">Fill in the Blank Question</h6>
-          <Form.Label className="mb-0">
-            <strong>Points:</strong>
-            <Form.Control
-              type="number"
-              value={question.points || 1}
-              onChange={(e) => handleFieldChange("points", parseInt(e.target.value))}
-              min="0"
-              style={{ width: "80px", display: "inline-block", marginLeft: "10px" }}
-            />
-          </Form.Label>
+          <div className="text-muted">
+            <strong>Total Points:</strong> {question.points || 0} (auto-calculated)
+          </div>
         </div>
 
         {/* Title */}
@@ -75,55 +137,103 @@ export default function FillBlankEditor({
             rows={3}
             value={question.question || ""}
             onChange={(e) => handleFieldChange("question", e.target.value)}
-            placeholder="Enter your question with a blank (e.g., 'The capital of France is _____')"
+            placeholder="Enter your question with numbered blanks (e.g., 'The capital of __1__ is __2__')"
           />
           <Form.Text className="text-muted">
-            Use underscores (___) to indicate where students should fill in the blank
+            Use __1__, __2__, __3__, etc. to indicate blanks. Students will fill in each blank separately.
           </Form.Text>
         </Form.Group>
 
-        {/* Possible Answers */}
-        <Form.Label>Possible Correct Answers:</Form.Label>
+        <Alert variant="info" className="py-2 mb-3">
+          <small>
+            <strong>Note:</strong> Each blank can have different points and multiple possible correct answers.
+            Total points are calculated automatically.
+          </small>
+        </Alert>
+
+        {/* Blanks Configuration */}
         <div className="mb-3">
-          {(question.possibleAnswers || [""]).map((answer: string, index: number) => (
-            <div key={index} className="d-flex align-items-center mb-2">
-              <Form.Control
-                type="text"
-                value={answer}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                placeholder={`Possible Answer ${index + 1}`}
-                className="flex-grow-1"
-              />
-              {(question.possibleAnswers?.length || 0) > 1 && (
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h6 className="mb-0">Blanks Configuration</h6>
+            <Button variant="primary" size="sm" onClick={handleAddBlank}>
+              + Add Blank
+            </Button>
+          </div>
+
+          {(question.blanks || []).map((blank: any, blankIndex: number) => (
+            <Card key={blankIndex} className="mb-3">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="mb-0 text-primary">Blank {blankIndex + 1}</h6>
+                  <div className="d-flex align-items-center gap-2">
+                    <Form.Label className="mb-0 me-2">
+                      <strong>Points:</strong>
+                    </Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={blank.points || 1}
+                      onChange={(e) => handleBlankPointsChange(blankIndex, parseInt(e.target.value) || 0)}
+                      min="0"
+                      style={{ width: "80px" }}
+                    />
+                    {(question.blanks?.length || 0) > 1 && (
+                      <Button
+                        variant="link"
+                        className="text-danger p-0"
+                        onClick={() => handleRemoveBlank(blankIndex)}
+                        title="Remove blank"
+                      >
+                        <BsTrash />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <Form.Label className="fw-bold">Possible Correct Answers:</Form.Label>
+                {(blank.possibleAnswers || [""]).map((answer: string, answerIndex: number) => (
+                  <div key={answerIndex} className="d-flex align-items-center mb-2">
+                    <Form.Control
+                      type="text"
+                      value={answer}
+                      onChange={(e) => handleBlankAnswerChange(blankIndex, answerIndex, e.target.value)}
+                      placeholder={`Answer ${answerIndex + 1}`}
+                      className="flex-grow-1"
+                    />
+                    {(blank.possibleAnswers?.length || 0) > 1 && (
+                      <Button
+                        variant="link"
+                        className="text-danger p-1 ms-2"
+                        onClick={() => handleRemoveAnswerFromBlank(blankIndex, answerIndex)}
+                        title="Remove answer"
+                      >
+                        <BsTrash />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+
                 <Button
                   variant="link"
-                  className="text-danger p-1 ms-2"
-                  onClick={() => handleRemoveAnswer(index)}
-                  title="Remove answer"
+                  onClick={() => handleAddAnswerToBlank(blankIndex)}
+                  className="p-0 mb-2"
+                  size="sm"
                 >
-                  <BsTrash />
+                  + Add Another Answer
                 </Button>
-              )}
-            </div>
+
+                {/* Case Sensitive */}
+                <Form.Group className="mb-0 mt-2">
+                  <Form.Check
+                    type="checkbox"
+                    label="Case Sensitive"
+                    checked={blank.caseSensitive || false}
+                    onChange={(e) => handleBlankCaseSensitiveChange(blankIndex, e.target.checked)}
+                  />
+                </Form.Group>
+              </Card.Body>
+            </Card>
           ))}
         </div>
-
-        <Button variant="link" onClick={handleAddAnswer} className="mb-3 p-0">
-          + Add Another Answer
-        </Button>
-
-        {/* Case Sensitive */}
-        <Form.Group className="mb-3">
-          <Form.Check
-            type="checkbox"
-            label="Case Sensitive"
-            checked={question.caseSensitive || false}
-            onChange={(e) => handleFieldChange("caseSensitive", e.target.checked)}
-          />
-          <Form.Text className="text-muted">
-            If checked, answers must match exact capitalization
-          </Form.Text>
-        </Form.Group>
 
         {/* Action Buttons */}
         <div className="d-flex justify-content-end gap-2 mt-4">

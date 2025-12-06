@@ -4,9 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../../../store";
-import { setQuizzes } from "../reducer";
+import { setQuizzes, updateQuiz } from "../reducer";
 import * as client from "../../../client";
-import { Button, Table } from "react-bootstrap";
+import { Button, Table, Dropdown } from "react-bootstrap";
+import { IoEllipsisVertical } from "react-icons/io5";
+import { FaEdit, FaTrash } from "react-icons/fa";
+import DeleteConfirmationDialog from "../../Assignments/DeleteConfirmationDialog";
 
 export default function QuizDetails() {
   const { cid, qid } = useParams();
@@ -16,6 +19,8 @@ export default function QuizDetails() {
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const isFaculty = (currentUser as any)?.role === "FACULTY";
   const isNew = qid === "new";
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const fetchQuizzes = async () => {
     if (cid) {
@@ -30,12 +35,33 @@ export default function QuizDetails() {
 
   const quiz = isNew ? null : (quizzes.find((q: any) => q._id === qid) as any);
 
+  const handleDelete = async () => {
+    try {
+      await client.deleteQuiz(qid as string);
+      setShowDeleteDialog(false);
+      router.push(`/Courses/${cid}/Quizzes`);
+    } catch (error) {
+      console.error("Error deleting quiz:", error);
+      alert("Failed to delete quiz");
+    }
+  };
+
+  const handlePublishToggle = async () => {
+    try {
+      const updatedQuiz = { ...quiz, published: !quiz.published };
+      await client.updateQuiz(updatedQuiz);
+      dispatch(updateQuiz(updatedQuiz));
+    } catch (error) {
+      console.error("Error toggling publish:", error);
+      alert("Failed to update quiz");
+    }
+  };
+
   if (!quiz && !isNew) {
     return <div>Loading...</div>;
   }
 
   if (isNew) {
-    // Redirect to create new quiz
     return <div>Creating new quiz...</div>;
   }
 
@@ -44,7 +70,7 @@ export default function QuizDetails() {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>{quiz.title}</h2>
         {isFaculty && (
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 align-items-center">
             <Button
               variant="secondary"
               onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/Preview`)}
@@ -57,6 +83,30 @@ export default function QuizDetails() {
             >
               Edit
             </Button>
+
+            <Dropdown>
+              <Dropdown.Toggle
+                variant="link"
+                className="p-0 text-dark"
+                style={{ border: "none", background: "none" }}
+                id={`quiz-details-dropdown-${qid}`}
+              >
+                <IoEllipsisVertical className="fs-4" />
+              </Dropdown.Toggle>
+
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/Edit`)}>
+                  <FaEdit className="me-2" /> Edit
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setShowDeleteDialog(true)} className="text-danger">
+                  <FaTrash className="me-2" /> Delete
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={handlePublishToggle}>
+                  {quiz.published ? "🚫 Unpublish" : "✅ Publish"}
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
           </div>
         )}
         {!isFaculty && (
@@ -91,7 +141,11 @@ export default function QuizDetails() {
             </tr>
             <tr>
               <td className="fw-semibold">Time Limit:</td>
-              <td>{quiz.timeLimit || 20} Minutes</td>
+              <td>
+                {quiz.hasTimeLimit === false 
+                  ? "No Time Limit" 
+                  : `${quiz.timeLimit || 20} Minutes`}
+              </td>
             </tr>
             <tr>
               <td className="fw-semibold">Multiple Attempts:</td>
@@ -148,7 +202,15 @@ export default function QuizDetails() {
           </tbody>
         </Table>
       </div>
+
+      {showDeleteDialog && (
+        <DeleteConfirmationDialog
+          show={showDeleteDialog}
+          handleClose={() => setShowDeleteDialog(false)}
+          assignmentTitle={quiz.title}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }
-

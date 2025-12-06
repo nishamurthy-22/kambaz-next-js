@@ -15,6 +15,7 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
   const { enrollments } = useSelector((state: RootState) => state.enrollmentsReducer);
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   
   const course = courses.find((course: any) => course._id === cid);
   const userId = (currentUser as any)?._id;
@@ -28,10 +29,36 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
   const canAccessCourse = isFaculty ? true : isEnrolled;
 
   useEffect(() => {
-    if (currentUser && !canAccessCourse) {
-      router.push("/Dashboard");
+    // Wait for currentUser and enrollments to load before checking access
+    if (!currentUser) {
+      // Still loading user data
+      return;
     }
-  }, [currentUser, canAccessCourse, router]);
+    
+    // If faculty, they can access immediately
+    if (isFaculty) {
+      setIsCheckingAccess(false);
+      return;
+    }
+    
+    // For students, wait for enrollments to load
+    // We consider enrollments loaded when it's either:
+    // 1. Not empty (has data), OR
+    // 2. We've waited long enough (user data is loaded but enrollments is empty)
+    if (enrollments.length > 0 || currentUser) {
+      setIsCheckingAccess(false);
+      
+      // Only redirect if we're sure they shouldn't have access
+      if (!canAccessCourse && enrollments.length > 0) {
+        router.push("/Dashboard");
+      }
+    }
+  }, [currentUser, canAccessCourse, router, isFaculty, enrollments]);
+
+  // Show loading while checking access
+  if (isCheckingAccess) {
+    return <div>Loading...</div>;
+  }
 
   if (currentUser && !canAccessCourse) {
     return null;

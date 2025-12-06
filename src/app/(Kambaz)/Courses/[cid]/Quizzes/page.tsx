@@ -8,7 +8,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../store";
 import { deleteQuiz, setQuizzes, updateQuiz } from "./reducer";
 import QuizControls from "./QuizControls";
-import { ListGroup, ListGroupItem } from "react-bootstrap";
+import { ListGroup, ListGroupItem, Alert, Container } from "react-bootstrap";
 import { MdArrowDropDown } from "react-icons/md";
 import { BsGripVertical } from "react-icons/bs";
 import { FaRocket } from "react-icons/fa";
@@ -24,6 +24,9 @@ export default function Quizzes() {
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const isFaculty = (currentUser as any)?.role === "FACULTY";
 
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const fetchQuizzes = async () => {
     const quizzesData = await client.findQuizzesForCourse(cid as string);
     dispatch(setQuizzes(quizzesData));
@@ -33,12 +36,22 @@ export default function Quizzes() {
     fetchQuizzes();
   }, [cid]);
 
-  // Filter quizzes: Faculty see all, Students see only published
-  const courseQuizzes = quizzes.filter((q: any) => {
-    if (q.course !== cid) return false;
-    if (isFaculty) return true; // Faculty see all quizzes
-    return q.published === true; // Students see only published quizzes
-  }) as any[];
+  const courseQuizzes = quizzes
+    .filter((q: any) => {
+      if (q.course !== cid) return false;
+      if (isFaculty) return true;
+      return q.published === true;
+    })
+    .sort((a: any, b: any) => {
+      const dateA = a["Available Date"] ? new Date(a["Available Date"]).getTime() : 0;
+      const dateB = b["Available Date"] ? new Date(b["Available Date"]).getTime() : 0;
+      
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      
+      return dateA - dateB;
+    }) as any[];
 
   const handleAddQuiz = async () => {
     const newQuiz = {
@@ -53,6 +66,7 @@ export default function Quizzes() {
       quizType: "Graded Quiz",
       assignmentGroup: "QUIZZES",
       shuffleAnswers: true,
+      hasTimeLimit: true,
       timeLimit: 20,
       multipleAttempts: false,
       attemptsAllowed: 1,
@@ -65,7 +79,6 @@ export default function Quizzes() {
     const createdQuiz = await client.createQuizForCourse(cid as string, newQuiz);
     router.push(`/Courses/${cid}/Quizzes/${createdQuiz._id}`);
   };
-
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<{ id: string; title: string } | null>(null);
@@ -80,9 +93,16 @@ export default function Quizzes() {
 
   const handleConfirmDelete = async () => {
     if (quizToDelete) {
-      await client.deleteQuiz(quizToDelete.id);
-      await fetchQuizzes();
-      setQuizToDelete(null);
+      try {
+        await client.deleteQuiz(quizToDelete.id);
+        await fetchQuizzes();
+        setQuizToDelete(null);
+        setSuccess("Quiz deleted successfully");
+        setTimeout(() => setSuccess(""), 3000);
+      } catch (error) {
+        console.error("Error deleting quiz:", error);
+        setError("Failed to delete quiz");
+      }
     }
   };
 
@@ -91,10 +111,88 @@ export default function Quizzes() {
     setQuizToDelete(null);
   };
 
+  const validateQuizForPublish = (quiz: any): string[] => {
+    const errors: string[] = [];
+
+    // Title validation
+    if (!quiz.title || quiz.title.trim() === "") {
+      errors.push("Quiz must have a title");
+    }
+
+    // Questions validation
+    if (!quiz.questions || quiz.questions.length === 0) {
+      errors.push("Quiz must have at least one question");
+    }
+
+    quiz.questions?.forEach((q: any, index: number) => {
+      if (!q.question || q.question.trim() === "") {
+        errors.push(`Question ${index + 1} is missing question text`);
+      }
+    });
+
+    // Date validation - All three dates required
+    if (!quiz["Available Date"] || quiz["Available Date"].trim() === "") {
+      errors.push("'Available From' date is required");
+    }
+
+    if (!quiz["Due Date"] || quiz["Due Date"].trim() === "") {
+      errors.push("'Due Date' is required");
+    }
+
+    if (!quiz["Available Until Date"] || quiz["Available Until Date"].trim() === "") {
+      errors.push("'Until' date is required");
+    }
+
+    // Date order validation
+    const availableDate = quiz["Available Date"] ? new Date(quiz["Available Date"]) : null;
+    const availableUntilDate = quiz["Available Until Date"] ? new Date(quiz["Available Until Date"]) : null;
+    const dueDate = quiz["Due Date"] ? new Date(quiz["Due Date"]) : null;
+
+    if (availableDate && availableUntilDate && availableDate >= availableUntilDate) {
+      errors.push("'Available From' must be before 'Until' date");
+    }
+
+    if (availableDate && dueDate && availableDate > dueDate) {
+      errors.push("'Available From' must be before or equal to 'Due' date");
+    }
+
+    if (dueDate && availableUntilDate && dueDate > availableUntilDate) {
+      errors.push("'Due' date must be before or equal to 'Until' date");
+    }
+
+    return errors;
+  };
+
   const handlePublishToggle = async (quiz: any) => {
-    const updatedQuiz = { ...quiz, published: !quiz.published };
-    await client.updateQuiz(updatedQuiz);
-    dispatch(updateQuiz(updatedQuiz));
+    setError("");
+    setSuccess("");
+
+    if (!quiz.published) {
+      const validationErrors = validateQuizForPublish(quiz);
+      if (validationErrors.length > 0) {
+        setError(
+          `Cannot publish "${quiz.title}": ${validationErrors.join("; ")}`
+        );
+        return;
+      }
+    }
+
+    try {
+      const updatedQuiz = { ...quiz, published: !quiz.published };
+      await client.updateQuiz(updatedQuiz);
+      dispatch(updateQuiz(updatedQuiz));
+      
+      setSuccess(
+        updatedQuiz.published 
+          ? `"${quiz.title}" published successfully` 
+          : `"${quiz.title}" unpublished successfully`
+      );
+      
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      console.error("Error toggling publish:", error);
+      setError(`Failed to ${quiz.published ? "unpublish" : "publish"} quiz`);
+    }
   };
 
   const getAvailabilityStatus = (quiz: any) => {
@@ -108,7 +206,7 @@ export default function Quizzes() {
 
     if (now < availableDate) {
       return { 
-        status: `Not available until ${quiz["Available Date"]}`, 
+        status: `Not available until ${new Date(quiz["Available Date"]).toLocaleDateString()}`, 
         className: "text-muted" 
       };
     }
@@ -119,8 +217,21 @@ export default function Quizzes() {
   };
 
   return (
-    <div>
+    <Container fluid className="px-4 py-3" style={{ maxWidth: "1400px" }}>
       {isFaculty && <QuizControls onAddQuiz={handleAddQuiz} />}
+      
+      {error && (
+        <Alert variant="danger" dismissible onClose={() => setError("")} className="mt-3">
+          {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert variant="success" dismissible onClose={() => setSuccess("")} className="mt-3">
+          {success}
+        </Alert>
+      )}
+
       <br />
       <br />
 
@@ -218,6 +329,6 @@ export default function Quizzes() {
           onConfirm={handleConfirmDelete}
         />
       )}
-    </div>
+    </Container>
   );
 }

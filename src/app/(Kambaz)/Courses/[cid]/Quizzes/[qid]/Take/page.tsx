@@ -19,12 +19,11 @@ export default function TakeQuiz() {
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [showResults, setShowResults] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
   const [attemptCount, setAttemptCount] = useState(0);
   const [latestAttempt, setLatestAttempt] = useState<any>(null);
   const [currentAttempt, setCurrentAttempt] = useState<any>(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [attemptData, setAttemptData] = useState<any>(null);
+  const [submittedAttempt, setSubmittedAttempt] = useState<any>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -40,21 +39,17 @@ export default function TakeQuiz() {
 
   const fetchAttemptData = async () => {
     try {
-      // Get completed attempt count
       const countData = await client.getQuizAttemptCount(qid as string);
       setAttemptCount(countData.count);
 
-      // Get latest completed attempt
       const latest = await client.getLatestQuizAttempt(qid as string);
       setLatestAttempt(latest);
 
-      // Check for in-progress attempt
       const inProgress = await client.getInProgressAttempt(qid as string);
       setCurrentAttempt(inProgress);
 
       return inProgress;
     } catch (error) {
-      console.error("Error fetching attempt data:", error);
       return null;
     }
   };
@@ -65,20 +60,19 @@ export default function TakeQuiz() {
     const inProgressAttempt = await fetchAttemptData();
     
     if (inProgressAttempt) {
-      // Resume existing attempt
-      console.log("Resuming in-progress attempt", inProgressAttempt);
       const savedAnswers: { [key: string]: any } = {};
       inProgressAttempt.answers?.forEach((ans: any) => {
         savedAnswers[ans.question] = ans.answer;
       });
       setAnswers(savedAnswers);
 
-      // Calculate time remaining based on elapsed time
-      const startTime = new Date(inProgressAttempt.startedAt);
-      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
-      const timeLimitSeconds = (quiz?.timeLimit || 20) * 60;
-      const remaining = Math.max(0, timeLimitSeconds - elapsed);
-      setTimeRemaining(remaining);
+      if (quiz?.hasTimeLimit !== false) {
+        const startTime = new Date(inProgressAttempt.startedAt);
+        const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        const timeLimitSeconds = (quiz?.timeLimit || 20) * 60;
+        const remaining = Math.max(0, timeLimitSeconds - elapsed);
+        setTimeRemaining(remaining);
+      }
     }
     
     setIsLoading(false);
@@ -93,19 +87,16 @@ export default function TakeQuiz() {
     if (foundQuiz) {
       setQuiz(foundQuiz);
       
-      // Only set initial time if no in-progress attempt
-      if (!currentAttempt) {
+      if (!currentAttempt && foundQuiz.hasTimeLimit !== false) {
         const timeLimitMinutes = foundQuiz.timeLimit || 20;
         setTimeRemaining(timeLimitMinutes * 60);
       }
     }
   }, [quizzes, qid]);
 
-  // Auto-save answers to database
   useEffect(() => {
     if (!currentAttempt || showResults) return;
 
-    // Debounce saves - wait 2 seconds after last change
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -115,14 +106,11 @@ export default function TakeQuiz() {
         const answersArray = Object.entries(answers).map(([questionId, answer]) => ({
           question: questionId,
           answer,
-          correct: false, // Will be calculated on submit
-          points: 0,
         }));
         
         await client.updateQuizAttemptAnswers(currentAttempt._id, answersArray);
-        console.log("Answers auto-saved to database");
       } catch (error) {
-        console.error("Error auto-saving answers:", error);
+        // Silent fail
       }
     }, 2000);
 
@@ -133,9 +121,9 @@ export default function TakeQuiz() {
     };
   }, [answers, currentAttempt, showResults]);
 
-  // Timer countdown
   useEffect(() => {
     if (!quiz || showResults || isLoading || !currentAttempt) return;
+    if (quiz.hasTimeLimit === false) return;
 
     timerRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -179,44 +167,11 @@ export default function TakeQuiz() {
     setAnswers({ ...answers, [questionId]: answer });
   };
 
-  const checkAnswer = (question: any, answer: any): boolean => {
-    if (question.type === "MULTIPLE_CHOICE") {
-      return answer === question.correctChoice;
-    } else if (question.type === "TRUE_FALSE") {
-      return answer === question.correctAnswer;
-    } else if (question.type === "FILL_BLANK") {
-      if (!answer) return false;
-      const userAnswer = question.caseSensitive ? answer : answer.toLowerCase();
-      return question.possibleAnswers.some((possibleAnswer: string) => {
-        const checkAnswer = question.caseSensitive ? possibleAnswer : possibleAnswer.toLowerCase();
-        return userAnswer === checkAnswer;
-      });
-    }
-    return false;
-  };
-
-  const calculateScore = () => {
-    const answersWithScores = questions.map((question: any) => {
-      const isCorrect = checkAnswer(question, answers[question._id]);
-      return {
-        question: question._id,
-        answer: answers[question._id],
-        correct: isCorrect,
-        points: isCorrect ? question.points || 0 : 0,
-      };
-    });
-
-    const totalScore = answersWithScores.reduce((sum, a) => sum + a.points, 0);
-    return { score: totalScore, answersWithScores };
-  };
-
   const handleStartQuiz = async () => {
     try {
       const newAttempt = await client.startQuizAttempt(qid as string);
       setCurrentAttempt(newAttempt);
-      console.log("Started new quiz attempt", newAttempt);
     } catch (error) {
-      console.error("Error starting quiz:", error);
       alert("Failed to start quiz. Please try again.");
     }
   };
@@ -224,21 +179,20 @@ export default function TakeQuiz() {
   const handleSubmit = async (autoSubmit: boolean = false) => {
     if (!currentAttempt) return;
 
-    // Clear timers
     if (timerRef.current) clearInterval(timerRef.current);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-    const { score: finalScore, answersWithScores } = calculateScore();
-    setScore(finalScore);
-
     try {
-      const submittedAttempt = await client.submitQuizAttempt(currentAttempt._id, {
-        answers: answersWithScores,
-        score: finalScore,
-        totalPoints: quiz.points || 0,
+      const answersArray = Object.entries(answers).map(([questionId, answer]) => ({
+        question: questionId,
+        answer,
+      }));
+
+      const gradedAttempt = await client.submitQuizAttempt(currentAttempt._id, {
+        answers: answersArray,
       });
       
-      setAttemptData(submittedAttempt);
+      setSubmittedAttempt(gradedAttempt);
       setShowResults(true);
       setShowSubmitModal(false);
       
@@ -246,7 +200,6 @@ export default function TakeQuiz() {
         alert("Time's up! Your quiz has been automatically submitted.");
       }
     } catch (error) {
-      console.error("Error submitting quiz:", error);
       alert("Failed to submit quiz. Please try again.");
     }
   };
@@ -264,8 +217,10 @@ export default function TakeQuiz() {
   };
 
   const renderQuestion = (question: any, index: number, isViewingResults: boolean = false) => {
-    const isCorrect = isViewingResults ? checkAnswer(question, answers[question._id]) : null;
-    const showCorrectAnswers = quiz.showCorrectAnswers === "Immediately";
+    let gradedAnswer = null;
+    if (isViewingResults && submittedAttempt) {
+      gradedAnswer = submittedAttempt.answers?.find((a: any) => a.question === question._id);
+    }
 
     return (
       <Card className="mb-4" key={question._id}>
@@ -273,9 +228,9 @@ export default function TakeQuiz() {
           <div className="d-flex justify-content-between align-items-start mb-3">
             <h5>
               Question {index + 1}
-              {isViewingResults && (
-                <span className={`ms-2 ${isCorrect ? "text-success" : "text-danger"}`}>
-                  {isCorrect ? <FaCheck /> : <FaTimes />}
+              {isViewingResults && gradedAnswer && (
+                <span className={`ms-2 ${gradedAnswer.correct ? "text-success" : gradedAnswer.points > 0 ? "text-warning" : "text-danger"}`}>
+                  {gradedAnswer.correct ? <FaCheck /> : gradedAnswer.points > 0 ? "◐" : <FaTimes />}
                 </span>
               )}
             </h5>
@@ -289,7 +244,6 @@ export default function TakeQuiz() {
             <div>
               {question.choices?.map((choice: string, choiceIndex: number) => {
                 const isSelected = answers[question._id] === choiceIndex;
-                const isCorrectChoice = choiceIndex === question.correctChoice;
 
                 return (
                   <Form.Check
@@ -301,11 +255,7 @@ export default function TakeQuiz() {
                     checked={isSelected}
                     onChange={() => handleAnswerChange(question._id, choiceIndex)}
                     disabled={isViewingResults}
-                    className={`mb-2 ${
-                      isViewingResults && showCorrectAnswers
-                        ? isCorrectChoice ? "text-success fw-bold" : isSelected ? "text-danger" : ""
-                        : ""
-                    }`}
+                    className="mb-2"
                   />
                 );
               })}
@@ -322,11 +272,7 @@ export default function TakeQuiz() {
                 checked={answers[question._id] === true}
                 onChange={() => handleAnswerChange(question._id, true)}
                 disabled={isViewingResults}
-                className={`mb-2 ${
-                  isViewingResults && showCorrectAnswers
-                    ? question.correctAnswer === true ? "text-success fw-bold" : answers[question._id] === true ? "text-danger" : ""
-                    : ""
-                }`}
+                className="mb-2"
               />
               <Form.Check
                 type="radio"
@@ -336,33 +282,62 @@ export default function TakeQuiz() {
                 checked={answers[question._id] === false}
                 onChange={() => handleAnswerChange(question._id, false)}
                 disabled={isViewingResults}
-                className={`mb-2 ${
-                  isViewingResults && showCorrectAnswers
-                    ? question.correctAnswer === false ? "text-success fw-bold" : answers[question._id] === false ? "text-danger" : ""
-                    : ""
-                }`}
+                className="mb-2"
               />
             </div>
           )}
 
           {question.type === "FILL_BLANK" && (
             <div>
-              <Form.Control
-                type="text"
-                value={answers[question._id] || ""}
-                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                disabled={isViewingResults}
-                placeholder="Type your answer here..."
-                className={
-                  isViewingResults && showCorrectAnswers
-                    ? isCorrect ? "border-success" : "border-danger"
-                    : ""
-                }
-              />
-              {isViewingResults && showCorrectAnswers && (
-                <div className="mt-2 small text-muted">
-                  <strong>Possible correct answers:</strong> {question.possibleAnswers?.join(", ")}
-                </div>
+              {(!question.blanks || question.blanks.length === 0) ? (
+                <Form.Control
+                  type="text"
+                  value={answers[question._id] || ""}
+                  onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                  disabled={isViewingResults}
+                  placeholder="Type your answer here..."
+                />
+              ) : (
+                <>
+                  {question.blanks.map((blank: any, blankIndex: number) => {
+                    const userAnswersArray = Array.isArray(answers[question._id]) 
+                      ? answers[question._id] 
+                      : [];
+                    
+                    return (
+                      <div key={blankIndex} className="mb-3">
+                        <Form.Label>
+                          Blank {blankIndex + 1} 
+                          <span className="text-muted ms-2">({blank.points || 0} pts)</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={userAnswersArray[blankIndex] || ""}
+                          onChange={(e) => {
+                            const newAnswers = [...userAnswersArray];
+                            newAnswers[blankIndex] = e.target.value;
+                            handleAnswerChange(question._id, newAnswers);
+                          }}
+                          disabled={isViewingResults}
+                          placeholder={`Answer for blank ${blankIndex + 1}`}
+                        />
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {isViewingResults && gradedAnswer && (
+                <Alert 
+                  variant={gradedAnswer.points === question.points ? "success" : gradedAnswer.points > 0 ? "warning" : "danger"} 
+                  className="py-2 mt-2"
+                >
+                  <small>
+                    <strong>Your Score:</strong> {gradedAnswer.points} / {question.points} pts
+                    {gradedAnswer.points > 0 && gradedAnswer.points < question.points && (
+                      <span className="ms-2">(Partial Credit)</span>
+                    )}
+                  </small>
+                </Alert>
               )}
             </div>
           )}
@@ -371,7 +346,6 @@ export default function TakeQuiz() {
     );
   };
 
-  // Check availability
   const now = new Date();
   const availableDate = quiz["Available Date"] ? new Date(quiz["Available Date"]) : null;
   const availableUntilDate = quiz["Available Until Date"] ? new Date(quiz["Available Until Date"]) : null;
@@ -388,7 +362,6 @@ export default function TakeQuiz() {
     return <Alert variant="danger">This quiz is no longer available.</Alert>;
   }
 
-  // Check if student has attempts remaining
   if (!canTakeQuiz && !currentAttempt) {
     return (
       <Alert variant="warning">
@@ -404,14 +377,15 @@ export default function TakeQuiz() {
     );
   }
 
-  // If no current attempt exists, need to start one
   if (!currentAttempt && !showResults) {
     return (
       <div style={{ maxWidth: "600px", margin: "50px auto" }}>
         <Card>
           <Card.Body>
             <h3>{quiz.title}</h3>
-            <p className="text-muted">Attempt {attemptCount + 1} {quiz.multipleAttempts && `of ${quiz.attemptsAllowed}`}</p>
+            <p className="text-muted">
+              Attempt {attemptCount + 1} {quiz.multipleAttempts && `of ${quiz.attemptsAllowed}`}
+            </p>
             
             {quiz.description && (
               <>
@@ -423,7 +397,10 @@ export default function TakeQuiz() {
             <div className="mt-4">
               <div><strong>Total Points:</strong> {quiz.points || 0}</div>
               <div><strong>Questions:</strong> {questions.length}</div>
-              <div><strong>Time Limit:</strong> {quiz.timeLimit || 20} Minutes</div>
+              <div>
+                <strong>Time Limit:</strong>{" "}
+                {quiz.hasTimeLimit === false ? "No Time Limit" : `${quiz.timeLimit || 20} Minutes`}
+              </div>
               <div><strong>Attempts Remaining:</strong> {attemptsRemaining}</div>
             </div>
 
@@ -443,7 +420,6 @@ export default function TakeQuiz() {
 
   return (
     <div className="wd-take-quiz" style={{ maxWidth: "900px", margin: "0 auto" }}>
-      {/* Header with Timer */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2>{quiz.title}</h2>
@@ -452,7 +428,7 @@ export default function TakeQuiz() {
             {quiz.multipleAttempts && ` of ${quiz.attemptsAllowed}`}
           </div>
         </div>
-        {!showResults && currentAttempt && (
+        {!showResults && currentAttempt && quiz.hasTimeLimit !== false && (
           <div className="d-flex gap-3 align-items-center">
             <Alert 
               variant={timeRemaining < 60 ? "danger" : timeRemaining < 300 ? "warning" : "info"} 
@@ -465,28 +441,25 @@ export default function TakeQuiz() {
         )}
       </div>
 
-      {/* Auto-save indicator */}
       {!showResults && currentAttempt && Object.keys(answers).length > 0 && (
         <Alert variant="success" className="py-2 mb-3">
-          <small>✓ Your answers are being saved automatically to the database</small>
+          <small>✓ Your answers are being saved automatically</small>
         </Alert>
       )}
 
-      {/* Results Summary */}
-      {showResults && (
-        <Alert variant={score >= (quiz.points || 0) * 0.7 ? "success" : "warning"} className="mb-4">
+      {showResults && submittedAttempt && (
+        <Alert variant={submittedAttempt.score >= (quiz.points || 0) * 0.7 ? "success" : "warning"} className="mb-4">
           <h4>Quiz Results</h4>
           <div className="fs-3">
-            <strong>Score: {score} / {quiz.points || 0}</strong>
-            <span className="ms-3">({((score / (quiz.points || 1)) * 100).toFixed(1)}%)</span>
+            <strong>Score: {submittedAttempt.score} / {submittedAttempt.totalPoints}</strong>
+            <span className="ms-3">
+              ({((submittedAttempt.score / (submittedAttempt.totalPoints || 1)) * 100).toFixed(1)}%)
+            </span>
           </div>
-          {attemptData && (
-            <div className="mt-2">Submitted: {new Date(attemptData.submittedAt).toLocaleString()}</div>
-          )}
+          <div className="mt-2">Submitted: {new Date(submittedAttempt.submittedAt).toLocaleString()}</div>
         </Alert>
       )}
 
-      {/* Questions */}
       {questions.length === 0 ? (
         <Alert variant="warning">This quiz has no questions yet.</Alert>
       ) : oneQuestionAtATime && !showResults ? (
@@ -533,8 +506,7 @@ export default function TakeQuiz() {
         </div>
       )}
 
-      {/* Submit Modal */}
-      <Modal show={showSubmitModal} onHide={() => setShowSubmitModal(false)}>
+      <Modal show={showSubmitModal} onHide={() => setShowSubmitModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Submit Quiz?</Modal.Title>
         </Modal.Header>
