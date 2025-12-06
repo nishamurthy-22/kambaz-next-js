@@ -159,13 +159,22 @@ export default function Dashboard() {
     <div id="wd-dashboard">
       <div className="d-flex justify-content-between align-items-center">
         <h1 id="wd-dashboard-title">Dashboard</h1>
-        <Button
-          variant="primary"
-          onClick={() => setShowAllCourses(!showAllCourses)}
-          id="wd-enrollments-button"
-        >
-          {showAllCourses ? "Show Enrolled" : "Enrollments"}
-        </Button>
+        <div className="d-flex gap-2">
+          <Button
+            variant={!showAllCourses ? "primary" : "outline-primary"}
+            onClick={() => setShowAllCourses(false)}
+            id="wd-my-courses-button"
+          >
+            My Courses
+          </Button>
+          <Button
+            variant={showAllCourses ? "primary" : "outline-primary"}
+            onClick={() => setShowAllCourses(true)}
+            id="wd-all-courses-button"
+          >
+            All Courses
+          </Button>
+        </div>
       </div>
       <hr />
       {isFaculty && (
@@ -184,7 +193,7 @@ export default function Dashboard() {
         </>
       )} 
       <h2 id="wd-dashboard-published">
-        {showAllCourses ? "All Courses" : "Published Courses"} ({filteredCourses.length})
+        {showAllCourses ? "All Courses" : "My Courses"} ({filteredCourses.length})
       </h2> 
       <hr />
       <div id="wd-dashboard-courses">
