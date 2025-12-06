@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CardImg, CardText, CardTitle, Row, Col, Button, Card, CardBody, FormControl} from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { addNewCourse, deleteCourse, updateCourse, setCourses } from "../Courses/reducer";
-import { addEnrollment, removeEnrollment, setEnrollments } from "../Enrollments/reducer";
+import { setCourses } from "../Courses/reducer";
+import { setEnrollments } from "../Enrollments/reducer";
 import { RootState } from "../store";
 import { useRouter } from "next/navigation";
 import * as client from "../Courses/client";
@@ -159,11 +159,12 @@ export default function Dashboard() {
     <div id="wd-dashboard">
       <div className="d-flex justify-content-between align-items-center">
         <h1 id="wd-dashboard-title">Dashboard</h1>
-        <div className="d-flex gap-2">
+        <div>
           <Button
             variant={!showAllCourses ? "primary" : "outline-primary"}
             onClick={() => setShowAllCourses(false)}
             id="wd-my-courses-button"
+            className="me-2"
           >
             My Courses
           </Button>
