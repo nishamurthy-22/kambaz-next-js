@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../../../../../../store";
+import { RootState } from "../../../../../store";
 import { setQuizzes, updateQuiz } from "../../reducer";
 import * as client from "../../../../client";
 import { Button, Form, Nav, Tab, Row, Col } from "react-bootstrap";
@@ -31,12 +31,12 @@ export default function QuizEditor() {
   }, [cid]);
 
   useEffect(() => {
-    const foundQuiz = quizzes.find((q: any) => q._id === qid);
+    const foundQuiz = quizzes.find((q: any) => q._id === qid) as any;
     if (foundQuiz) {
       setQuiz(foundQuiz);
       setFormData({
         ...foundQuiz,
-        questions: foundQuiz.questions || []
+        questions: (foundQuiz as any).questions || []
       });
     }
   }, [quizzes, qid]);
