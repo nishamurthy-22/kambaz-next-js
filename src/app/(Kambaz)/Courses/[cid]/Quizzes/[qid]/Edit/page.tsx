@@ -85,9 +85,32 @@ export default function QuizEditor() {
         }
       }
       if (q.type === "FILL_BLANK") {
-        if (!q.possibleAnswers || q.possibleAnswers.length === 0) {
-          errors.push(`Question ${index + 1} must have at least one possible answer`);
+        console.log(`===== VALIDATION DEBUG for Question ${index + 1} =====`);
+        console.log("Question blanks:", JSON.stringify(q.blanks, null, 2));
+        console.log("Has blanks:", !!q.blanks);
+        console.log("Is array:", Array.isArray(q.blanks));
+        console.log("Blanks length:", q.blanks?.length);
+        
+        // Only support multi-blank format
+        if (!q.blanks || !Array.isArray(q.blanks) || q.blanks.length === 0) {
+          errors.push(`Question ${index + 1} must have at least one blank`);
+        } else {
+          q.blanks.forEach((blank: any, blankIndex: number) => {
+            console.log(`  Blank ${blankIndex + 1}:`, JSON.stringify(blank, null, 2));
+            console.log(`  Has possibleAnswers:`, !!blank.possibleAnswers);
+            console.log(`  possibleAnswers length:`, blank.possibleAnswers?.length);
+            console.log(`  possibleAnswers values:`, blank.possibleAnswers);
+            
+            if (!blank.possibleAnswers || blank.possibleAnswers.length === 0) {
+              errors.push(`Question ${index + 1}, Blank ${blankIndex + 1} must have at least one possible answer`);
+            }
+            const hasEmptyAnswer = blank.possibleAnswers?.some((a: string) => !a || a.trim() === "");
+            if (hasEmptyAnswer) {
+              errors.push(`Question ${index + 1}, Blank ${blankIndex + 1} has empty answers`);
+            }
+          });
         }
+        console.log("=================================================");
       }
     });
 
@@ -150,6 +173,10 @@ export default function QuizEditor() {
   };
 
   const handleSaveAndPublish = async () => {
+    console.log("===== FULL FORMDATA AT PUBLISH =====");
+    console.log(JSON.stringify(formData, null, 2));
+    console.log("====================================");
+    
     const errors = validateQuizForPublish();
     if (errors.length > 0) {
       setValidationErrors(errors);

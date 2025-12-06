@@ -2,24 +2,54 @@
 "use client";
 import { ReactNode, useEffect, useState } from "react";
 import CourseNavigation from "./Navigation";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useParams, useRouter } from "next/navigation";
 import { RootState } from "../../store";
 import { FaAlignJustify } from "react-icons/fa";
 import Breadcrumb from "./Breadcrumb";
+import * as client from "../../Courses/client";
+import { setEnrollments } from "../../Enrollments/reducer";
 
 export default function CoursesLayout({ children }: { children: ReactNode }) {
   const { cid } = useParams();
   const router = useRouter();
+  const dispatch = useDispatch();
   const { courses } = useSelector((state: RootState) => state.coursesReducer);
   const { enrollments } = useSelector((state: RootState) => state.enrollmentsReducer);
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [isLoadingEnrollments, setIsLoadingEnrollments] = useState(false);
   
   const course = courses.find((course: any) => course._id === cid);
   const userId = (currentUser as any)?._id;
   const isFaculty = (currentUser as any)?.role === "FACULTY";
+  
+  // Load enrollments if not already loaded
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (currentUser && enrollments.length === 0 && !isLoadingEnrollments) {
+        setIsLoadingEnrollments(true);
+        try {
+          const fetchedEnrollments = await client.findEnrollmentsForUser();
+          const normalizedEnrollments = fetchedEnrollments.map((e: any) => ({
+            ...e,
+            user: String(e.user),
+            course: String(e.course),
+          }));
+          dispatch(setEnrollments(normalizedEnrollments));
+        } catch (error: any) {
+          if (error?.response?.status !== 401) {
+            console.error(error);
+          }
+          dispatch(setEnrollments([]));
+        } finally {
+          setIsLoadingEnrollments(false);
+        }
+      }
+    };
+    
+    fetchEnrollments();
+  }, [currentUser, enrollments.length, dispatch, isLoadingEnrollments]);
   
   const isEnrolled = enrollments.some(
     (e: any) => String(e.user) === String(userId) && String(e.course) === String(cid)
@@ -29,40 +59,11 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
   const canAccessCourse = isFaculty ? true : isEnrolled;
 
   useEffect(() => {
-    // Wait for currentUser and enrollments to load before checking access
-    if (!currentUser) {
-      // Still loading user data
-      return;
+    // Only redirect if we have user data and enrollments loaded
+    if (currentUser && !isFaculty && !isLoadingEnrollments && enrollments.length > 0 && !canAccessCourse) {
+      router.push("/Dashboard");
     }
-    
-    // If faculty, they can access immediately
-    if (isFaculty) {
-      setIsCheckingAccess(false);
-      return;
-    }
-    
-    // For students, wait for enrollments to load
-    // We consider enrollments loaded when it's either:
-    // 1. Not empty (has data), OR
-    // 2. We've waited long enough (user data is loaded but enrollments is empty)
-    if (enrollments.length > 0 || currentUser) {
-      setIsCheckingAccess(false);
-      
-      // Only redirect if we're sure they shouldn't have access
-      if (!canAccessCourse && enrollments.length > 0) {
-        router.push("/Dashboard");
-      }
-    }
-  }, [currentUser, canAccessCourse, router, isFaculty, enrollments]);
-
-  // Show loading while checking access
-  if (isCheckingAccess) {
-    return <div>Loading...</div>;
-  }
-
-  if (currentUser && !canAccessCourse) {
-    return null;
-  }
+  }, [currentUser, canAccessCourse, router, isFaculty, isLoadingEnrollments, enrollments.length]);
 
   return (
     <div id="wd-courses">

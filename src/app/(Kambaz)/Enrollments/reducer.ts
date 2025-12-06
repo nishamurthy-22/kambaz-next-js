@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice } from "@reduxjs/toolkit";
-import { enrollments } from "../Database";
 import { v4 as uuidv4 } from "uuid";
 
 const initialState = {
-  enrollments: enrollments,
+  enrollments: [],  // Start empty, load from API
 };
 
 const enrollmentsSlice = createSlice({
@@ -39,4 +38,3 @@ const enrollmentsSlice = createSlice({
 
 export const { setEnrollments, addEnrollment, removeEnrollment } = enrollmentsSlice.actions;
 export default enrollmentsSlice.reducer;
-

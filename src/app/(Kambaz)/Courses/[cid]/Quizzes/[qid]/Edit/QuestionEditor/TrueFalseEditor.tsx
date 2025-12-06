@@ -1,21 +1,49 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
 import { Form, Button } from "react-bootstrap";
 
 interface TrueFalseEditorProps {
   question: any;
-  onChange: (question: any) => void;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (updatedQuestion: any) => void;
 }
 
 export default function TrueFalseEditor({
   question,
-  onChange,
   onCancel,
   onSave,
 }: TrueFalseEditorProps) {
-  const handleFieldChange = (field: string, value: any) => {
-    onChange({ ...question, [field]: value });
+  const [title, setTitle] = useState(question.title || "");
+  const [questionText, setQuestionText] = useState(question.question || "");
+  const [points, setPoints] = useState(question.points || 1);
+  const [correctAnswer, setCorrectAnswer] = useState(
+    question.correctAnswer !== undefined ? question.correctAnswer : true
+  );
+
+  useEffect(() => {
+    setTitle(question.title || "");
+    setQuestionText(question.question || "");
+    setPoints(question.points || 1);
+    setCorrectAnswer(
+      question.correctAnswer !== undefined ? question.correctAnswer : true
+    );
+  }, [question._id]);
+
+  const handleSaveClick = () => {
+    const updatedQuestion = {
+      ...question,
+      title,
+      question: questionText,
+      points,
+      correctAnswer,
+      type: "TRUE_FALSE"
+    };
+    
+    console.log("===== SAVING TRUE/FALSE QUESTION =====");
+    console.log("Updated question:", JSON.stringify(updatedQuestion, null, 2));
+    console.log("======================================");
+    
+    onSave(updatedQuestion);
   };
 
   return (
@@ -27,38 +55,35 @@ export default function TrueFalseEditor({
             <strong>Points:</strong>
             <Form.Control
               type="number"
-              value={question.points || 1}
-              onChange={(e) => handleFieldChange("points", parseInt(e.target.value))}
+              value={points}
+              onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
               min="0"
               style={{ width: "80px", display: "inline-block", marginLeft: "10px" }}
             />
           </Form.Label>
         </div>
 
-        {/* Title */}
         <Form.Group className="mb-3">
           <Form.Label>Question Title</Form.Label>
           <Form.Control
             type="text"
-            value={question.title || ""}
-            onChange={(e) => handleFieldChange("title", e.target.value)}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter question title"
           />
         </Form.Group>
 
-        {/* Question Text */}
         <Form.Group className="mb-3">
           <Form.Label>Question</Form.Label>
           <Form.Control
             as="textarea"
             rows={3}
-            value={question.question || ""}
-            onChange={(e) => handleFieldChange("question", e.target.value)}
+            value={questionText}
+            onChange={(e) => setQuestionText(e.target.value)}
             placeholder="Enter your true/false statement..."
           />
         </Form.Group>
 
-        {/* Correct Answer */}
         <Form.Group className="mb-3">
           <Form.Label>Correct Answer:</Form.Label>
           <div>
@@ -66,26 +91,25 @@ export default function TrueFalseEditor({
               type="radio"
               label="True"
               name="correctAnswer"
-              checked={question.correctAnswer === true}
-              onChange={() => handleFieldChange("correctAnswer", true)}
+              checked={correctAnswer === true}
+              onChange={() => setCorrectAnswer(true)}
               className="mb-2"
             />
             <Form.Check
               type="radio"
               label="False"
               name="correctAnswer"
-              checked={question.correctAnswer === false}
-              onChange={() => handleFieldChange("correctAnswer", false)}
+              checked={correctAnswer === false}
+              onChange={() => setCorrectAnswer(false)}
             />
           </div>
         </Form.Group>
 
-        {/* Action Buttons */}
         <div className="d-flex justify-content-end gap-2 mt-4">
           <Button variant="secondary" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onSave}>
+          <Button variant="danger" onClick={handleSaveClick}>
             Update Question
           </Button>
         </div>

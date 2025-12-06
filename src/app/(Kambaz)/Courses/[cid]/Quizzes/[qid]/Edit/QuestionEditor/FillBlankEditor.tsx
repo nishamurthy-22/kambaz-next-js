@@ -1,112 +1,129 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
 import { Form, Button, Alert, Card } from "react-bootstrap";
 import { BsTrash } from "react-icons/bs";
 
 interface FillBlankEditorProps {
   question: any;
-  onChange: (question: any) => void;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (updatedQuestion: any) => void;
 }
 
 export default function FillBlankEditor({
   question,
-  onChange,
   onCancel,
   onSave,
 }: FillBlankEditorProps) {
-  const handleFieldChange = (field: string, value: any) => {
-    onChange({ ...question, [field]: value });
-  };
+  const [title, setTitle] = useState(question.title || "");
+  const [questionText, setQuestionText] = useState(question.question || "");
+  const [blanks, setBlanks] = useState(
+    question.blanks && question.blanks.length > 0
+      ? question.blanks
+      : [{
+          possibleAnswers: [""],
+          points: 1,
+          caseSensitive: false
+        }]
+  );
+
+  // When question prop changes (e.g., when editing a different question), reset local state
+  useEffect(() => {
+    setTitle(question.title || "");
+    setQuestionText(question.question || "");
+    setBlanks(
+      question.blanks && question.blanks.length > 0
+        ? question.blanks
+        : [{
+            possibleAnswers: [""],
+            points: 1,
+            caseSensitive: false
+          }]
+    );
+  }, [question._id]);
+
+  const totalPoints = blanks.reduce((sum, blank) => sum + (blank.points || 0), 0);
 
   const handleAddBlank = () => {
-    const newBlanks = [
-      ...(question.blanks || []),
+    setBlanks([
+      ...blanks,
       {
         possibleAnswers: [""],
         points: 1,
         caseSensitive: false
       }
-    ];
-    
-    // Calculate total points
-    const totalPoints = newBlanks.reduce((sum, blank) => sum + (blank.points || 0), 0);
-    
-    onChange({ 
-      ...question, 
-      blanks: newBlanks,
-      points: totalPoints 
-    });
+    ]);
   };
 
   const handleRemoveBlank = (blankIndex: number) => {
-    if ((question.blanks?.length || 0) <= 1) {
+    if (blanks.length <= 1) {
       alert("Must have at least 1 blank");
       return;
     }
-    
-    const newBlanks = question.blanks.filter((_: any, i: number) => i !== blankIndex);
-    const totalPoints = newBlanks.reduce((sum: number, blank: any) => sum + (blank.points || 0), 0);
-    
-    onChange({ 
-      ...question, 
-      blanks: newBlanks,
-      points: totalPoints 
-    });
+    setBlanks(blanks.filter((_, i) => i !== blankIndex));
   };
 
   const handleBlankPointsChange = (blankIndex: number, points: number) => {
-    const newBlanks = [...(question.blanks || [])];
+    const newBlanks = [...blanks];
     newBlanks[blankIndex] = { ...newBlanks[blankIndex], points };
-    
-    const totalPoints = newBlanks.reduce((sum, blank) => sum + (blank.points || 0), 0);
-    
-    onChange({ 
-      ...question, 
-      blanks: newBlanks,
-      points: totalPoints 
-    });
+    setBlanks(newBlanks);
   };
 
   const handleBlankAnswerChange = (blankIndex: number, answerIndex: number, value: string) => {
-    const newBlanks = [...(question.blanks || [])];
-    newBlanks[blankIndex].possibleAnswers[answerIndex] = value;
-    onChange({ ...question, blanks: newBlanks });
+    const newBlanks = [...blanks];
+    const updatedBlank = { ...newBlanks[blankIndex] };
+    const updatedAnswers = [...(updatedBlank.possibleAnswers || [])];
+    updatedAnswers[answerIndex] = value;
+    updatedBlank.possibleAnswers = updatedAnswers;
+    newBlanks[blankIndex] = updatedBlank;
+    setBlanks(newBlanks);
   };
 
   const handleAddAnswerToBlank = (blankIndex: number) => {
-    const newBlanks = [...(question.blanks || [])];
-    newBlanks[blankIndex].possibleAnswers.push("");
-    onChange({ ...question, blanks: newBlanks });
+    const newBlanks = [...blanks];
+    const updatedBlank = { ...newBlanks[blankIndex] };
+    updatedBlank.possibleAnswers = [...(updatedBlank.possibleAnswers || []), ""];
+    newBlanks[blankIndex] = updatedBlank;
+    setBlanks(newBlanks);
   };
 
   const handleRemoveAnswerFromBlank = (blankIndex: number, answerIndex: number) => {
-    const newBlanks = [...(question.blanks || [])];
-    if (newBlanks[blankIndex].possibleAnswers.length <= 1) {
+    const newBlanks = [...blanks];
+    const updatedBlank = { ...newBlanks[blankIndex] };
+    
+    if ((updatedBlank.possibleAnswers?.length || 0) <= 1) {
       alert("Each blank must have at least 1 possible answer");
       return;
     }
-    newBlanks[blankIndex].possibleAnswers = newBlanks[blankIndex].possibleAnswers.filter(
+    
+    updatedBlank.possibleAnswers = updatedBlank.possibleAnswers.filter(
       (_: any, i: number) => i !== answerIndex
     );
-    onChange({ ...question, blanks: newBlanks });
+    newBlanks[blankIndex] = updatedBlank;
+    setBlanks(newBlanks);
   };
 
   const handleBlankCaseSensitiveChange = (blankIndex: number, value: boolean) => {
-    const newBlanks = [...(question.blanks || [])];
-    newBlanks[blankIndex].caseSensitive = value;
-    onChange({ ...question, blanks: newBlanks });
+    const newBlanks = [...blanks];
+    newBlanks[blankIndex] = { ...newBlanks[blankIndex], caseSensitive: value };
+    setBlanks(newBlanks);
   };
 
-  // Initialize with one blank if none exist
-  if (!question.blanks || question.blanks.length === 0) {
-    const initialBlanks = [{
-      possibleAnswers: [""],
-      points: 1,
-      caseSensitive: false
-    }];
-    onChange({ ...question, blanks: initialBlanks, points: 1 });
-  }
+  const handleSaveClick = () => {
+    const updatedQuestion = {
+      ...question,
+      title,
+      question: questionText,
+      blanks,
+      points: totalPoints,
+      type: "FILL_BLANK"
+    };
+    
+    console.log("===== SAVING FILL BLANK QUESTION =====");
+    console.log("Updated question:", JSON.stringify(updatedQuestion, null, 2));
+    console.log("=====================================");
+    
+    onSave(updatedQuestion);
+  };
 
   return (
     <div className="border p-4 mb-3 bg-light">
@@ -114,29 +131,27 @@ export default function FillBlankEditor({
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="mb-0">Fill in the Blank Question</h6>
           <div className="text-muted">
-            <strong>Total Points:</strong> {question.points || 0} (auto-calculated)
+            <strong>Total Points:</strong> {totalPoints} (auto-calculated)
           </div>
         </div>
 
-        {/* Title */}
         <Form.Group className="mb-3">
           <Form.Label>Question Title</Form.Label>
           <Form.Control
             type="text"
-            value={question.title || ""}
-            onChange={(e) => handleFieldChange("title", e.target.value)}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter question title"
           />
         </Form.Group>
 
-        {/* Question Text */}
         <Form.Group className="mb-3">
           <Form.Label>Question</Form.Label>
           <Form.Control
             as="textarea"
             rows={3}
-            value={question.question || ""}
-            onChange={(e) => handleFieldChange("question", e.target.value)}
+            value={questionText}
+            onChange={(e) => setQuestionText(e.target.value)}
             placeholder="Enter your question with numbered blanks (e.g., 'The capital of __1__ is __2__')"
           />
           <Form.Text className="text-muted">
@@ -151,7 +166,6 @@ export default function FillBlankEditor({
           </small>
         </Alert>
 
-        {/* Blanks Configuration */}
         <div className="mb-3">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h6 className="mb-0">Blanks Configuration</h6>
@@ -160,7 +174,7 @@ export default function FillBlankEditor({
             </Button>
           </div>
 
-          {(question.blanks || []).map((blank: any, blankIndex: number) => (
+          {blanks.map((blank: any, blankIndex: number) => (
             <Card key={blankIndex} className="mb-3">
               <Card.Body>
                 <div className="d-flex justify-content-between align-items-center mb-3">
@@ -176,7 +190,7 @@ export default function FillBlankEditor({
                       min="0"
                       style={{ width: "80px" }}
                     />
-                    {(question.blanks?.length || 0) > 1 && (
+                    {blanks.length > 1 && (
                       <Button
                         variant="link"
                         className="text-danger p-0"
@@ -221,7 +235,6 @@ export default function FillBlankEditor({
                   + Add Another Answer
                 </Button>
 
-                {/* Case Sensitive */}
                 <Form.Group className="mb-0 mt-2">
                   <Form.Check
                     type="checkbox"
@@ -235,12 +248,11 @@ export default function FillBlankEditor({
           ))}
         </div>
 
-        {/* Action Buttons */}
         <div className="d-flex justify-content-end gap-2 mt-4">
           <Button variant="secondary" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onSave}>
+          <Button variant="danger" onClick={handleSaveClick}>
             Update Question
           </Button>
         </div>

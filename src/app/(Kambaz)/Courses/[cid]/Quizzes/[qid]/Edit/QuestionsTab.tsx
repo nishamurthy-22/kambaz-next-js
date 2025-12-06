@@ -32,6 +32,9 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
   };
 
   const handleEditQuestion = (question: any) => {
+    console.log("===== EDITING QUESTION =====");
+    console.log("Question to edit:", JSON.stringify(question, null, 2));
+    console.log("============================");
     setEditingQuestionId(question._id);
     setEditingQuestion({ ...question });
   };
@@ -43,12 +46,17 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
     }
   };
 
-  const handleSaveQuestion = () => {
-    if (!editingQuestion) return;
-
+  const handleSaveQuestion = (updatedQuestion: any) => {
+    console.log("===== HANDLE SAVE QUESTION IN QUESTIONSTAB =====");
+    console.log("Received updated question:", JSON.stringify(updatedQuestion, null, 2));
+    
     const updatedQuestions = questions.map((q) =>
-      q._id === editingQuestion._id ? editingQuestion : q
+      q._id === updatedQuestion._id ? updatedQuestion : q
     );
+    
+    console.log("Updated questions array:", JSON.stringify(updatedQuestions, null, 2));
+    console.log("================================================");
+    
     onQuestionsChange(updatedQuestions);
     setEditingQuestionId(null);
     setEditingQuestion(null);
@@ -76,6 +84,7 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
         choices: ["", "", "", ""],
         correctChoice: 0,
         correctAnswer: undefined,
+        blanks: undefined,
         possibleAnswers: undefined,
         caseSensitive: undefined,
       };
@@ -85,17 +94,24 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
         correctAnswer: true,
         choices: undefined,
         correctChoice: undefined,
+        blanks: undefined,
         possibleAnswers: undefined,
         caseSensitive: undefined,
       };
     } else if (type === "FILL_BLANK") {
       updatedQuestion = {
         ...updatedQuestion,
-        possibleAnswers: [""],
-        caseSensitive: false,
+        blanks: [{
+          possibleAnswers: [""],
+          points: 1,
+          caseSensitive: false
+        }],
+        points: 1,
         choices: undefined,
         correctChoice: undefined,
         correctAnswer: undefined,
+        possibleAnswers: undefined,
+        caseSensitive: undefined,
       };
     }
 
@@ -118,6 +134,9 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
                 {question.type === "FILL_BLANK" && "Fill in Blank"}
               </span>
               <span>{question.points || 0} pts</span>
+              {question.type === "FILL_BLANK" && question.blanks && (
+                <span className="ms-2">({question.blanks.length} blank{question.blanks.length !== 1 ? 's' : ''})</span>
+              )}
             </div>
           </div>
           <div className="d-flex gap-2">
@@ -148,7 +167,6 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
 
     const commonProps = {
       question: editingQuestion,
-      onChange: setEditingQuestion,
       onCancel: handleCancelEdit,
       onSave: handleSaveQuestion,
     };
