@@ -39,10 +39,6 @@ export default function TrueFalseEditor({
       type: "TRUE_FALSE"
     };
     
-    console.log("===== SAVING TRUE/FALSE QUESTION =====");
-    console.log("Updated question:", JSON.stringify(updatedQuestion, null, 2));
-    console.log("======================================");
-    
     onSave(updatedQuestion);
   };
 

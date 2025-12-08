@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import { Button, Form, ListGroup } from "react-bootstrap";
+import { Button, Form, ListGroup, InputGroup, FormControl } from "react-bootstrap";
+import InputGroupText from "react-bootstrap/esm/InputGroupText";
 import { v4 as uuidv4 } from "uuid";
 import { BsTrash, BsPencil } from "react-icons/bs";
+import { IoMdSearch } from "react-icons/io";
 import MultipleChoiceEditor from "./QuestionEditor/MultipleChoiceEditor";
 import TrueFalseEditor from "./QuestionEditor/TrueFalseEditor";
 import FillBlankEditor from "./QuestionEditor/FillBlankEditor";
@@ -15,6 +17,7 @@ interface QuestionsTabProps {
 export default function QuestionsTab({ questions, onQuestionsChange }: QuestionsTabProps) {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleAddQuestion = () => {
     const newQuestion = {
@@ -32,9 +35,6 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
   };
 
   const handleEditQuestion = (question: any) => {
-    console.log("===== EDITING QUESTION =====");
-    console.log("Question to edit:", JSON.stringify(question, null, 2));
-    console.log("============================");
     setEditingQuestionId(question._id);
     setEditingQuestion({ ...question });
   };
@@ -47,15 +47,9 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
   };
 
   const handleSaveQuestion = (updatedQuestion: any) => {
-    console.log("===== HANDLE SAVE QUESTION IN QUESTIONSTAB =====");
-    console.log("Received updated question:", JSON.stringify(updatedQuestion, null, 2));
-    
     const updatedQuestions = questions.map((q) =>
       q._id === updatedQuestion._id ? updatedQuestion : q
     );
-    
-    console.log("Updated questions array:", JSON.stringify(updatedQuestions, null, 2));
-    console.log("================================================");
     
     onQuestionsChange(updatedQuestions);
     setEditingQuestionId(null);
@@ -63,7 +57,6 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
   };
 
   const handleCancelEdit = () => {
-    // If it's a new question that was never saved, remove it
     if (editingQuestion && !questions.find(q => q._id === editingQuestion._id && q.question)) {
       const updatedQuestions = questions.filter((q) => q._id !== editingQuestion._id);
       onQuestionsChange(updatedQuestions);
@@ -77,7 +70,6 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
 
     let updatedQuestion = { ...editingQuestion, type };
 
-    // Reset type-specific fields
     if (type === "MULTIPLE_CHOICE") {
       updatedQuestion = {
         ...updatedQuestion,
@@ -119,6 +111,15 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
   };
 
   const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
+
+  const filteredQuestions = questions.filter((q: any) => {
+    if (!searchTerm.trim()) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      q.title?.toLowerCase().includes(searchLower) ||
+      q.question?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const renderQuestionPreview = (question: any) => {
     return (
@@ -208,6 +209,27 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
         </div>
       </div>
 
+      {questions.length > 0 && (
+        <div className="mb-3">
+          <InputGroup style={{ maxWidth: "400px" }}>
+            <InputGroupText className="bg-white border-end-0">
+              <IoMdSearch />
+            </InputGroupText>
+            <FormControl
+              placeholder="Search questions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border-start-0 shadow-none"
+            />
+          </InputGroup>
+          {searchTerm && (
+            <div className="mt-2 text-muted small">
+              Showing {filteredQuestions.length} of {questions.length} questions
+            </div>
+          )}
+        </div>
+      )}
+
       {editingQuestionId && renderQuestionEditor()}
 
       {questions.length === 0 ? (
@@ -215,21 +237,29 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
           <h6>No questions yet</h6>
           <p>Click "+ New Question" to add your first question</p>
         </div>
+      ) : filteredQuestions.length === 0 ? (
+        <div className="text-center text-muted py-5 border rounded">
+          <h6>No questions match your search</h6>
+          <p>Try a different search term</p>
+        </div>
       ) : (
         <ListGroup>
-          {questions.map((question, index) => (
-            <ListGroup.Item
-              key={question._id}
-              className={editingQuestionId === question._id ? "d-none" : ""}
-            >
-              <div className="d-flex align-items-start">
-                <div className="me-3 text-muted">
-                  <strong>Q{index + 1}</strong>
+          {filteredQuestions.map((question, index) => {
+            const originalIndex = questions.findIndex((q: any) => q._id === question._id);
+            return (
+              <ListGroup.Item
+                key={question._id}
+                className={editingQuestionId === question._id ? "d-none" : ""}
+              >
+                <div className="d-flex align-items-start">
+                  <div className="me-3 text-muted">
+                    <strong>Q{originalIndex + 1}</strong>
+                  </div>
+                  <div className="flex-grow-1">{renderQuestionPreview(question)}</div>
                 </div>
-                <div className="flex-grow-1">{renderQuestionPreview(question)}</div>
-              </div>
-            </ListGroup.Item>
-          ))}
+              </ListGroup.Item>
+            );
+          })}
         </ListGroup>
       )}
     </div>

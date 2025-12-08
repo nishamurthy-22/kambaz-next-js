@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../../../../../../store";
+import { RootState } from "../../../../../store";
 import { setQuizzes, updateQuiz } from "../../reducer";
 import * as client from "../../../../client";
 import { Button, Form, Nav, Tab, Row, Col, Alert, Container } from "react-bootstrap";
@@ -23,9 +23,6 @@ export default function QuizEditor() {
   const fetchQuizzes = async () => {
     if (cid) {
       const fetchedQuizzes = await client.findQuizzesForCourse(cid as string);
-      console.log("===== FETCHED QUIZZES FROM DATABASE =====");
-      console.log("Quizzes:", JSON.stringify(fetchedQuizzes, null, 2));
-      console.log("=========================================");
       dispatch(setQuizzes(fetchedQuizzes));
     }
   };
@@ -35,11 +32,8 @@ export default function QuizEditor() {
   }, [cid]);
 
   useEffect(() => {
-    const foundQuiz = quizzes.find((q: any) => q._id === qid);
+    const foundQuiz = quizzes.find((q: any) => q._id === qid) as any;
     if (foundQuiz) {
-      console.log("===== FOUND QUIZ IN REDUX =====");
-      console.log("Quiz:", JSON.stringify(foundQuiz, null, 2));
-      console.log("================================");
       setQuiz(foundQuiz);
       setFormData({
         ...foundQuiz,
@@ -53,10 +47,7 @@ export default function QuizEditor() {
     setValidationErrors([]);
   };
 
-  const handleQuestionsChange = (questions: any[]) => {
-    console.log("===== HANDLE QUESTIONS CHANGE =====");
-    console.log("Received questions:", JSON.stringify(questions, null, 2));
-    
+  const handleQuestionsChange = async (questions: any[]) => {
     const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
     const updatedFormData = {
       ...formData,
@@ -65,11 +56,14 @@ export default function QuizEditor() {
       "Questions": questions.length
     };
     
-    console.log("Updated formData:", JSON.stringify(updatedFormData, null, 2));
-    console.log("===================================");
-    
     setFormData(updatedFormData);
     setValidationErrors([]);
+
+    try {
+      const updatedQuiz = await client.updateQuiz(updatedFormData);
+      dispatch(updateQuiz(updatedQuiz));
+    } catch (error) {
+    }
   };
 
   const validateQuizForPublish = (): string[] => {
@@ -151,7 +145,6 @@ export default function QuizEditor() {
       dispatch(updateQuiz(updatedQuiz));
       setFormData(updatedQuiz);
     } catch (error) {
-      console.error("Error unpublishing quiz:", error);
       alert("Failed to unpublish quiz");
     }
   };
@@ -159,28 +152,16 @@ export default function QuizEditor() {
   const handleSave = async () => {
     setValidationErrors([]);
 
-    console.log("===== HANDLE SAVE - FORMDATA BEING SENT =====");
-    console.log(JSON.stringify(formData, null, 2));
-    console.log("=============================================");
-
     try {
       const updatedQuiz = await client.updateQuiz(formData);
-      console.log("===== RESPONSE FROM SERVER =====");
-      console.log(JSON.stringify(updatedQuiz, null, 2));
-      console.log("================================");
       dispatch(updateQuiz(updatedQuiz));
       router.push(`/Courses/${cid}/Quizzes/${qid}`);
     } catch (error) {
-      console.error("Error updating quiz:", error);
       alert("Failed to update quiz");
     }
   };
 
   const handleSaveAndPublish = async () => {
-    console.log("===== FULL FORMDATA AT PUBLISH =====");
-    console.log(JSON.stringify(formData, null, 2));
-    console.log("====================================");
-    
     const errors = validateQuizForPublish();
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -190,20 +171,10 @@ export default function QuizEditor() {
 
     try {
       const dataToSend = { ...formData, published: true };
-      console.log("===== SENDING TO SERVER =====");
-      console.log(JSON.stringify(dataToSend, null, 2));
-      console.log("=============================");
-      
       const updatedQuiz = await client.updateQuiz(dataToSend);
-      
-      console.log("===== RESPONSE FROM SERVER =====");
-      console.log(JSON.stringify(updatedQuiz, null, 2));
-      console.log("================================");
-      
       dispatch(updateQuiz(updatedQuiz));
       router.push(`/Courses/${cid}/Quizzes`);
     } catch (error) {
-      console.error("Error updating quiz:", error);
       alert("Failed to update quiz");
     }
   };

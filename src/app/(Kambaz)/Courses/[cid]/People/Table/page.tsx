@@ -25,10 +25,8 @@ export default function PeopleTablePage() {
   const [showUserId, setShowUserId] = useState<string | null>(null);
 
   const handleUserClick = (userId: string) => {
-    console.log("handleUserClick called with userId:", userId);
     setShowDetails(true);
     setShowUserId(userId);
-    console.log("State set - showDetails: true, showUserId:", userId);
   };
   const [formData, setFormData] = useState<any>({
     username: "",
@@ -107,7 +105,6 @@ export default function PeopleTablePage() {
     setEditingUser(null);
   };
 
-  console.log("Render - showDetails:", showDetails, "showUserId:", showUserId);
   
   return (
     <>

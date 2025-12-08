@@ -47,7 +47,6 @@ export default function MultipleChoiceEditor({
     newChoices[index] = value;
     setChoices(newChoices);
     
-    // If the correct answer was the old value, update it to the new value
     if (correctAnswer === oldValue) {
       setCorrectAnswer(value);
     }
@@ -64,10 +63,9 @@ export default function MultipleChoiceEditor({
     }
     
     const removedChoice = choices[index];
-    const newChoices = choices.filter((_, i) => i !== index);
+    const newChoices = choices.filter((_: any, i: number) => i !== index);
     setChoices(newChoices);
     
-    // If the removed choice was the correct answer, reset to first choice
     if (correctAnswer === removedChoice) {
       setCorrectAnswer(newChoices[0] || "");
     }
@@ -83,10 +81,6 @@ export default function MultipleChoiceEditor({
       correctAnswer,
       type: "MULTIPLE_CHOICE"
     };
-    
-    console.log("===== SAVING MULTIPLE CHOICE QUESTION =====");
-    console.log("Updated question:", JSON.stringify(updatedQuestion, null, 2));
-    console.log("===========================================");
     
     onSave(updatedQuestion);
   };

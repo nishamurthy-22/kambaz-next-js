@@ -3,7 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import { v4 as uuidv4 } from "uuid";
 
 const initialState = {
-  enrollments: [],  // Start empty, load from API
+  enrollments: [],
 };
 
 const enrollmentsSlice = createSlice({

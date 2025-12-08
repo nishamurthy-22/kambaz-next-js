@@ -39,7 +39,6 @@ export default function QuizLessonControlButtons({
 
   return (
     <div className="d-flex align-items-center gap-2">
-      {/* Publish/Unpublish Icon */}
       <button
         className="btn btn-link p-0"
         onClick={handlePublish}
@@ -49,7 +48,6 @@ export default function QuizLessonControlButtons({
         {published ? "✅" : "🚫"}
       </button>
 
-      {/* Three Dots Dropdown */}
       <Dropdown onClick={(e) => e.stopPropagation()}>
         <Dropdown.Toggle
           variant="link"

@@ -34,10 +34,8 @@ export default function Dashboard() {
   const onAddNewCourse = async () => {
     try {
       const newCourse = await client.createCourse(course);
-      // Refresh my courses to include the newly created course (this will deduplicate)
       await fetchMyCourses();
       await fetchEnrollments();
-      // Also update all courses list
       const updatedAllCourses = await fetchAllCourses();
       setAllCoursesList(updatedAllCourses);
       setCourse({
@@ -51,7 +49,6 @@ export default function Dashboard() {
       });
       setFormKey(prev => prev + 1);
     } catch (error) {
-      console.error("Error creating course:", error);
       alert("Failed to create course. Please try again.");
     }
   };
@@ -61,7 +58,6 @@ export default function Dashboard() {
     try {
       if (currentUser) {
         const myCourses = await client.findMyCourses();
-        // Deduplicate courses by _id to prevent duplicates
         const uniqueCourses = Array.from(
           new Map(myCourses.map((course: any) => [course._id, course])).values()
         );
@@ -69,7 +65,6 @@ export default function Dashboard() {
       }
     } catch (error: any) {
       if (error?.response?.status !== 401) {
-        console.error(error);
       }
       dispatch(setCourses([]));
     }
@@ -78,13 +73,11 @@ export default function Dashboard() {
   const fetchAllCourses = async () => {
     try {
       const allCourses = await client.fetchAllCourses();
-      // Deduplicate courses by _id
       const uniqueCourses = Array.from(
         new Map(allCourses.map((course: any) => [course._id, course])).values()
       );
       return uniqueCourses;
     } catch (error) {
-      console.error(error);
       return [];
     }
   };
@@ -102,7 +95,6 @@ export default function Dashboard() {
       }
     } catch (error: any) {
       if (error?.response?.status !== 401) {
-        console.error(error);
       }
       dispatch(setEnrollments([]));
     }
@@ -114,7 +106,6 @@ export default function Dashboard() {
     if (currentUser) {
       fetchMyCourses();
       fetchEnrollments();
-      // Pre-fetch all courses for enrollment view
       fetchAllCourses().then(setAllCoursesList);
     }
   }, [currentUser]);
@@ -126,15 +117,12 @@ export default function Dashboard() {
     );
   };
 
-  // For students: show enrolled courses by default, all courses when "Enrollments" is clicked
-  // For faculty: show their created courses by default, all courses when "Enrollments" is clicked
   const filteredCourses = showAllCourses ? allCoursesList : courses;
 
   const handleEnrollment = async (courseId: string, event: any) => {
     event.preventDefault();
     event.stopPropagation();
     if (!userId || !courseId) {
-      console.error("Missing userId or courseId");
       return;
     }
     try {
@@ -144,10 +132,8 @@ export default function Dashboard() {
         await client.enrollUserInCourse(courseId);
       }
       await fetchEnrollments();
-      // Refresh my courses to reflect enrollment changes
       await fetchMyCourses();
     } catch (error: any) {
-      console.error("Error handling enrollment:", error);
       await fetchEnrollments();
       await fetchMyCourses();
     }
@@ -155,7 +141,6 @@ export default function Dashboard() {
 
   const handleCourseClick = (courseId: string, event: any) => {
     const enrolled = isEnrolled(courseId);
-    // Faculty can access any course, students can only access enrolled courses
     const canAccess = isFaculty ? true : enrolled;
     
     if (!canAccess) {
@@ -168,7 +153,6 @@ export default function Dashboard() {
   const onDeleteCourse = async (courseId: string) => {
     try {
       const response = await client.deleteCourse(courseId);
-      // Check if delete was successful
       if (response) {
         await fetchMyCourses();
         const updatedAllCourses = await fetchAllCourses();
@@ -178,7 +162,6 @@ export default function Dashboard() {
         }
       }
     } catch (error: any) {
-      console.error("Error deleting course:", error);
       const errorMessage = error?.response?.data?.error || error?.message || "Failed to delete course";
       alert(errorMessage);
     }
@@ -210,7 +193,6 @@ export default function Dashboard() {
             variant="primary"
             onClick={async () => {
               if (!showAllCourses) {
-                // When switching to enrollments view, fetch all courses
                 const allCourses = await fetchAllCourses();
                 setAllCoursesList(allCourses);
               }
@@ -248,7 +230,6 @@ export default function Dashboard() {
         <Row xs={1} md={5} className="g-4">
           {filteredCourses.map((course: any) => {
             const enrolled = isEnrolled(course._id);
-            // Faculty can access any course, students can only access enrolled courses
             const canAccessCourse = isFaculty ? true : enrolled;
             
             return (

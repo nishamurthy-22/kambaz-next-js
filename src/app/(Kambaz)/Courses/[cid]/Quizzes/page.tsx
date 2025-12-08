@@ -26,6 +26,7 @@ export default function Quizzes() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchQuizzes = async () => {
     const quizzesData = await client.findQuizzesForCourse(cid as string);
@@ -41,6 +42,14 @@ export default function Quizzes() {
       if (q.course !== cid) return false;
       if (isFaculty) return true;
       return q.published === true;
+    })
+    .filter((q: any) => {
+      if (!searchTerm.trim()) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        q.title?.toLowerCase().includes(searchLower) ||
+        q.description?.toLowerCase().includes(searchLower)
+      );
     })
     .sort((a: any, b: any) => {
       const dateA = a["Available Date"] ? new Date(a["Available Date"]).getTime() : 0;
@@ -100,7 +109,6 @@ export default function Quizzes() {
         setSuccess("Quiz deleted successfully");
         setTimeout(() => setSuccess(""), 3000);
       } catch (error) {
-        console.error("Error deleting quiz:", error);
         setError("Failed to delete quiz");
       }
     }
@@ -114,12 +122,10 @@ export default function Quizzes() {
   const validateQuizForPublish = (quiz: any): string[] => {
     const errors: string[] = [];
 
-    // Title validation
     if (!quiz.title || quiz.title.trim() === "") {
       errors.push("Quiz must have a title");
     }
 
-    // Questions validation
     if (!quiz.questions || quiz.questions.length === 0) {
       errors.push("Quiz must have at least one question");
     }
@@ -130,7 +136,6 @@ export default function Quizzes() {
       }
     });
 
-    // Date validation - All three dates required
     if (!quiz["Available Date"] || quiz["Available Date"].trim() === "") {
       errors.push("'Available From' date is required");
     }
@@ -143,7 +148,6 @@ export default function Quizzes() {
       errors.push("'Until' date is required");
     }
 
-    // Date order validation
     const availableDate = quiz["Available Date"] ? new Date(quiz["Available Date"]) : null;
     const availableUntilDate = quiz["Available Until Date"] ? new Date(quiz["Available Until Date"]) : null;
     const dueDate = quiz["Due Date"] ? new Date(quiz["Due Date"]) : null;
@@ -190,7 +194,6 @@ export default function Quizzes() {
       
       setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
-      console.error("Error toggling publish:", error);
       setError(`Failed to ${quiz.published ? "unpublish" : "publish"} quiz`);
     }
   };
@@ -218,7 +221,11 @@ export default function Quizzes() {
 
   return (
     <Container fluid className="px-4 py-3" style={{ maxWidth: "1400px" }}>
-      {isFaculty && <QuizControls onAddQuiz={handleAddQuiz} />}
+      <QuizControls 
+        onAddQuiz={handleAddQuiz}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
       
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError("")} className="mt-3">

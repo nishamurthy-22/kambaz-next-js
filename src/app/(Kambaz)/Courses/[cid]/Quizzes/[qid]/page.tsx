@@ -42,7 +42,6 @@ export default function QuizDetails() {
       setShowDeleteDialog(false);
       router.push(`/Courses/${cid}/Quizzes`);
     } catch (error) {
-      console.error("Error deleting quiz:", error);
       alert("Failed to delete quiz");
     }
   };
@@ -144,7 +143,6 @@ export default function QuizDetails() {
       await client.updateQuiz(updatedQuiz);
       dispatch(updateQuiz(updatedQuiz));
     } catch (error) {
-      console.error("Error toggling publish:", error);
       alert("Failed to update quiz");
     }
   };

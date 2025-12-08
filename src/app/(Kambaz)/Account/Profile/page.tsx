@@ -28,7 +28,6 @@ export default function Profile() {
       setSuccess("Profile updated successfully!");
       setIsLoading(false);
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccess("");
       }, 3000);
@@ -46,8 +45,6 @@ export default function Profile() {
       } else {
         setError("Failed to update profile. Please try again.");
       }
-      
-      console.error("Update profile error:", err);
     }
   };
 
@@ -65,8 +62,6 @@ export default function Profile() {
       dispatch(setCurrentUser(null));
       router.push("/Account/Signin");
     } catch (err) {
-      console.error("Signout error:", err);
-      // Still redirect even if signout fails
       dispatch(setCurrentUser(null));
       router.push("/Account/Signin");
     }

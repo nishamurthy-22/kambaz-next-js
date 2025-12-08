@@ -3,12 +3,10 @@ import axios from "axios";
 
 const axiosWithCredentials = axios.create({ withCredentials: true });
 
-// Add response interceptor to handle 401 errors
 axiosWithCredentials.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Session expired or not logged in
       if (typeof window !== 'undefined') {
         alert("Your session has expired. Please sign in again.");
         window.location.href = "/Account/Signin";
@@ -152,7 +150,6 @@ export const updateQuiz = async (quiz: any) => {
   return data;
 };
 
-// Quiz Attempts API - Database-backed persistence
 export const startQuizAttempt = async (quizId: string) => {
   const response = await axiosWithCredentials.post(
     `${QUIZZES_API}/${quizId}/attempts/start`

@@ -89,7 +89,6 @@ export default function TakeQuiz() {
     if (foundQuiz) {
       setQuiz(foundQuiz);
       
-      // Shuffle choices for MCQ questions if shuffle is enabled
       if (foundQuiz.shuffleAnswers && foundQuiz.questions) {
         const shuffled: { [key: string]: string[] } = {};
         foundQuiz.questions.forEach((q: any) => {
@@ -131,7 +130,6 @@ export default function TakeQuiz() {
         
         await client.updateQuizAttemptAnswers(currentAttempt._id, answersArray);
       } catch (error) {
-        // Silent fail
       }
     }, 2000);
 
@@ -243,7 +241,6 @@ export default function TakeQuiz() {
       gradedAnswer = submittedAttempt.answers?.find((a: any) => a.question === question._id);
     }
 
-    // Get choices - either shuffled or original
     const displayChoices = quiz.shuffleAnswers && shuffledChoices[question._id]
       ? shuffledChoices[question._id]
       : question.choices;

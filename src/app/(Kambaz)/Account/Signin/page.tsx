@@ -19,10 +19,8 @@ export default function Signin() {
   const router = useRouter();
 
   const signin = async () => {
-    // Clear previous errors
     setError("");
 
-    // Validation
     if (!credentials.username || !credentials.password) {
       setError("Please enter both username and password");
       return;
@@ -42,7 +40,6 @@ export default function Signin() {
     } catch (err: any) {
       setIsLoading(false);
       
-      // Check for specific error messages from backend
       if (err.response?.status === 401) {
         setError(err.response?.data?.message || "Invalid username or password");
       } else if (err.response?.status === 500) {
@@ -52,8 +49,6 @@ export default function Signin() {
       } else {
         setError("An error occurred. Please try again.");
       }
-      
-      console.error("Signin error:", err);
     }
   };
 

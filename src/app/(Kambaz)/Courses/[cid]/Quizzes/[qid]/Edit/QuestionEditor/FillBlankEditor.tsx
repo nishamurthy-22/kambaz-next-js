@@ -26,7 +26,6 @@ export default function FillBlankEditor({
         }]
   );
 
-  // When question prop changes (e.g., when editing a different question), reset local state
   useEffect(() => {
     setTitle(question.title || "");
     setQuestionText(question.question || "");
@@ -117,10 +116,6 @@ export default function FillBlankEditor({
       points: totalPoints,
       type: "FILL_BLANK"
     };
-    
-    console.log("===== SAVING FILL BLANK QUESTION =====");
-    console.log("Updated question:", JSON.stringify(updatedQuestion, null, 2));
-    console.log("=====================================");
     
     onSave(updatedQuestion);
   };

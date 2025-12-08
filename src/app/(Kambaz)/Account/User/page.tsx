@@ -85,11 +85,9 @@ export default function Users() {
             setShowUserId(null);
           }}
           onDelete={async () => {
-            // Refresh users list after deletion
             await fetchUsers();
           }}
           onUpdate={async () => {
-            // Refresh users list after update
             await fetchUsers();
           }}
         />

@@ -51,8 +51,7 @@ export default function QuizPreview() {
   };
 
   const checkFillBlankAnswer = (question: any, userAnswers: any) => {
-    if (!question.blanks || question.blanks.length === 0) {
-      // Legacy single blank
+      if (!question.blanks || question.blanks.length === 0) {
       if (!userAnswers) return { correct: false, points: 0 };
       const userAnswer = question.caseSensitive ? userAnswers : userAnswers.toLowerCase();
       const isCorrect = question.possibleAnswers?.some((possibleAnswer: string) => {
@@ -62,7 +61,6 @@ export default function QuizPreview() {
       return { correct: isCorrect, points: isCorrect ? (question.points || 0) : 0 };
     }
 
-    // Multi-blank with partial credit
     const answersArray = Array.isArray(userAnswers) ? userAnswers : [];
     let totalPoints = 0;
     let allCorrect = true;
@@ -238,7 +236,6 @@ export default function QuizPreview() {
           {question.type === "FILL_BLANK" && (
             <div>
               {(!question.blanks || question.blanks.length === 0) ? (
-                // Legacy single blank
                 <>
                   <Form.Control
                     type="text"
@@ -262,7 +259,6 @@ export default function QuizPreview() {
                   )}
                 </>
               ) : (
-                // Multi-blank
                 <>
                   {question.blanks.map((blank: any, blankIndex: number) => {
                     const userAnswersArray = Array.isArray(answers[question._id]) 

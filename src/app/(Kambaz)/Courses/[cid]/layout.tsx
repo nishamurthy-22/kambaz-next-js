@@ -24,7 +24,6 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
   const userId = (currentUser as any)?._id;
   const isFaculty = (currentUser as any)?.role === "FACULTY";
   
-  // Load enrollments if not already loaded
   useEffect(() => {
     const fetchEnrollments = async () => {
       if (currentUser && enrollments.length === 0 && !isLoadingEnrollments) {
@@ -39,7 +38,6 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
           dispatch(setEnrollments(normalizedEnrollments));
         } catch (error: any) {
           if (error?.response?.status !== 401) {
-            console.error(error);
           }
           dispatch(setEnrollments([]));
         } finally {
@@ -55,11 +53,9 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
     (e: any) => String(e.user) === String(userId) && String(e.course) === String(cid)
   );
 
-  // Faculty can access any course, students can only access enrolled courses
   const canAccessCourse = isFaculty ? true : isEnrolled;
 
   useEffect(() => {
-    // Only redirect if we have user data and enrollments loaded
     if (currentUser && !isFaculty && !isLoadingEnrollments && enrollments.length > 0 && !canAccessCourse) {
       router.push("/Dashboard");
     }

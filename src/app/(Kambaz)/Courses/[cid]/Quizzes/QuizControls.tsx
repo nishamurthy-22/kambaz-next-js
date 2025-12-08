@@ -8,7 +8,13 @@ import InputGroupText from "react-bootstrap/esm/InputGroupText";
 import { FaPlus } from "react-icons/fa6";
 import { IoMdSearch } from "react-icons/io";
 
-export default function QuizControls({ onAddQuiz }: { onAddQuiz: () => void }) {
+interface QuizControlsProps {
+  onAddQuiz: () => void;
+  searchTerm: string;
+  onSearchChange: (searchTerm: string) => void;
+}
+
+export default function QuizControls({ onAddQuiz, searchTerm, onSearchChange }: QuizControlsProps) {
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const isFaculty = (currentUser as any)?.role === "FACULTY";
 
@@ -25,6 +31,8 @@ export default function QuizControls({ onAddQuiz }: { onAddQuiz: () => void }) {
           size="lg"
           placeholder="Search for Quiz"
           className="border-start-0 shadow-none"
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </InputGroup>
 
