@@ -30,24 +30,24 @@ export default function Team() {
               <strong>Frontend Repository:</strong>
               <br />
               <Link 
-                href="https://github.com/nishamurthy-22/kambaz-next-js.git" 
+                href="https://github.com/nishamurthy-22/kambaz-next-js/tree/feature/final" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 style={{ wordBreak: "break-all" }}
               >
-                https://github.com/nishamurthy-22/kambaz-next-js.git
+                https://github.com/nishamurthy-22/kambaz-next-js/tree/feature/final
               </Link>
             </div>
             <div style={{ marginTop: "15px" }}>
               <strong>Backend Repository:</strong>
               <br />
               <Link 
-                href="https://github.com/nishamurthy-22/kambaz-node-server-app.git" 
+                href="https://github.com/nishamurthy-22/kambaz-node-server-app/tree/feature/final" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 style={{ wordBreak: "break-all" }}
               >
-                https://github.com/nishamurthy-22/kambaz-node-server-app.git
+                https://github.com/nishamurthy-22/kambaz-node-server-app/tree/feature/final
               </Link>
             </div>
           </div>
