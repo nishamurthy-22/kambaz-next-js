@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../../../../../../store";
+import { RootState } from "../../../../../store";
 import { setQuizzes } from "../../reducer";
 import * as client from "../../../../client";
 import { Button, Form, Card, Alert } from "react-bootstrap";
