@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../../../store";
@@ -31,14 +31,14 @@ export default function TakeQuiz() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchQuizzes = async () => {
+  const fetchQuizzes = useCallback(async () => {
     if (cid) {
       const fetchedQuizzes = await client.findQuizzesForCourse(cid as string);
       dispatch(setQuizzes(fetchedQuizzes));
     }
-  };
+  }, [cid, dispatch]);
 
-  const fetchAttemptData = async () => {
+  const fetchAttemptData = useCallback(async () => {
     try {
       const countData = await client.getQuizAttemptCount(qid as string);
       setAttemptCount(countData.count);
@@ -53,7 +53,7 @@ export default function TakeQuiz() {
     } catch (error) {
       return null;
     }
-  };
+  }, [qid]);
 
   const shuffleArray = (array: any[]) => {
     const shuffled = [...array];
@@ -64,7 +64,7 @@ export default function TakeQuiz() {
     return shuffled;
   };
 
-  const initializeQuiz = async () => {
+  const initializeQuiz = useCallback(async () => {
     setIsLoading(true);
     await fetchQuizzes();
     const inProgressAttempt = await fetchAttemptData();
@@ -78,14 +78,14 @@ export default function TakeQuiz() {
     }
     
     setIsLoading(false);
-  };
+  }, [fetchQuizzes, fetchAttemptData]);
 
   useEffect(() => {
     initializeQuiz();
-  }, [cid, qid]);
+  }, [initializeQuiz]);
 
   useEffect(() => {
-    const foundQuiz = quizzes.find((q: any) => q._id === qid);
+    const foundQuiz: any = quizzes.find((q: any) => q._id === qid);
     if (foundQuiz) {
       setQuiz(foundQuiz);
       
