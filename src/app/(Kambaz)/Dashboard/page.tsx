@@ -1,12 +1,11 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react/jsx-key */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { CardImg, CardText, CardTitle, Row, Col, Button, Card, CardBody, FormControl} from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { addNewCourse, deleteCourse, updateCourse, setCourses } from "../Courses/reducer";
-import { addEnrollment, removeEnrollment, setEnrollments } from "../Enrollments/reducer";
+import { setCourses } from "../Courses/reducer";
+import { setEnrollments } from "../Enrollments/reducer";
 import { RootState } from "../store";
 import { useRouter } from "next/navigation";
 import * as client from "../Courses/client";
@@ -18,21 +17,9 @@ export default function Dashboard() {
   const dispatch = useDispatch();
   const router = useRouter();
   
-  useEffect(() => {
-    if (!currentUser) {
-      router.push("/Account/Signin");
-    }
-  }, [currentUser, router]);
-  
-  if (!currentUser) {
-    return null;
-  }
-  
-  const userId = (currentUser as any)?._id;
-  const isFaculty = (currentUser as any)?.role === "FACULTY";
-  
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [allCoursesList, setAllCoursesList] = useState<any[]>([]);
   const [course, setCourse] = useState<any>({
     _id: "0", 
     name: "New Course", 
@@ -42,30 +29,7 @@ export default function Dashboard() {
     img: "/images/reactjs.jpg", 
     description: "New Description"
   });
-  const onAddNewCourse = async () => {
-    try {
-      const newCourse = await client.createCourse(course);
-      await fetchMyCourses();
-      await fetchEnrollments();
-      const updatedAllCourses = await fetchAllCourses();
-      setAllCoursesList(updatedAllCourses);
-      setCourse({
-        _id: "0", 
-        name: "New Course", 
-        number: "New Number",
-        startDate: "2023-09-10", 
-        endDate: "2023-12-15",
-        img: "/images/reactjs.jpg", 
-        description: "New Description"
-      });
-      setFormKey(prev => prev + 1);
-    } catch (error) {
-      alert("Failed to create course. Please try again.");
-    }
-  };
-
-
-  const fetchMyCourses = async () => {
+  const fetchMyCourses = useCallback(async () => {
     try {
       if (currentUser) {
         const myCourses = await client.findMyCourses();
@@ -79,21 +43,21 @@ export default function Dashboard() {
       }
       dispatch(setCourses([]));
     }
-  };
+  }, [currentUser, dispatch]);
 
-  const fetchAllCourses = async () => {
+  const fetchAllCourses = useCallback(async () => {
     try {
       const allCourses = await client.fetchAllCourses();
       const uniqueCourses = Array.from(
         new Map(allCourses.map((course: any) => [course._id, course])).values()
       );
       return uniqueCourses;
-    } catch (error) {
+    } catch {
       return [];
     }
-  };
+  }, []);
 
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
     try {
       if (currentUser) {
         const enrollments = await client.findEnrollmentsForUser();
@@ -109,17 +73,46 @@ export default function Dashboard() {
       }
       dispatch(setEnrollments([]));
     }
-  };
-
-  const [allCoursesList, setAllCoursesList] = useState<any[]>([]);
+  }, [currentUser, dispatch]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchMyCourses();
-      fetchEnrollments();
-      fetchAllCourses().then(setAllCoursesList);
+    if (!currentUser) {
+      router.push("/Account/Signin");
+      return;
     }
-  }, [currentUser]);
+    fetchMyCourses();
+    fetchEnrollments();
+    fetchAllCourses().then(setAllCoursesList);
+  }, [currentUser, router, fetchMyCourses, fetchEnrollments, fetchAllCourses]);
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const userId = (currentUser as any)?._id;
+  const isFaculty = (currentUser as any)?.role === "FACULTY";
+
+  const onAddNewCourse = async () => {
+    try {
+      await client.createCourse(course);
+      await fetchMyCourses();
+      await fetchEnrollments();
+      const updatedAllCourses = await fetchAllCourses();
+      setAllCoursesList(updatedAllCourses);
+      setCourse({
+        _id: "0", 
+        name: "New Course", 
+        number: "New Number",
+        startDate: "2023-09-10", 
+        endDate: "2023-12-15",
+        img: "/images/reactjs.jpg", 
+        description: "New Description"
+      });
+      setFormKey(prev => prev + 1);
+    } catch {
+      alert("Failed to create course. Please try again.");
+    }
+  };
 
   const isEnrolled = (courseId: string) => {
     if (!userId || !courseId) return false;
@@ -144,22 +137,12 @@ export default function Dashboard() {
       }
       await fetchEnrollments();
       await fetchMyCourses();
-    } catch (error: any) {
+    } catch {
       await fetchEnrollments();
       await fetchMyCourses();
     }
   };
 
-  const handleCourseClick = (courseId: string, event: any) => {
-    const enrolled = isEnrolled(courseId);
-    const canAccess = isFaculty ? true : enrolled;
-    
-    if (!canAccess) {
-      event.preventDefault();
-      return;
-    }
-    router.push(`/Courses/${courseId}/Home`);
-  };
 
   const onDeleteCourse = async (courseId: string) => {
     try {
