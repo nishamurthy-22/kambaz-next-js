@@ -40,7 +40,7 @@ export default function FillBlankEditor({
     );
   }, [question._id]);
 
-  const totalPoints = blanks.reduce((sum, blank) => sum + (blank.points || 0), 0);
+  const totalPoints = blanks.reduce((sum: number, blank: any) => sum + (blank.points || 0), 0);
 
   const handleAddBlank = () => {
     setBlanks([
@@ -58,7 +58,7 @@ export default function FillBlankEditor({
       alert("Must have at least 1 blank");
       return;
     }
-    setBlanks(blanks.filter((_, i) => i !== blankIndex));
+    setBlanks(blanks.filter((_: any, i: number) => i !== blankIndex));
   };
 
   const handleBlankPointsChange = (blankIndex: number, points: number) => {
