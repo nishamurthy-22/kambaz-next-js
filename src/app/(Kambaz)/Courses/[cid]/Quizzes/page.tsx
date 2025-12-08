@@ -86,7 +86,7 @@ export default function Quizzes() {
       lockQuestionsAfterAnswering: false,
     };
     const createdQuiz = await client.createQuizForCourse(cid as string, newQuiz);
-    router.push(`/Courses/${cid}/Quizzes/${createdQuiz._id}`);
+    router.push(`/Courses/${cid}/Quizzes/${createdQuiz._id}/Edit`);
   };
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

@@ -17,6 +17,17 @@ export default function Dashboard() {
   const { enrollments } = useSelector((state: RootState) => state.enrollmentsReducer);
   const dispatch = useDispatch();
   const router = useRouter();
+  
+  useEffect(() => {
+    if (!currentUser) {
+      router.push("/Account/Signin");
+    }
+  }, [currentUser, router]);
+  
+  if (!currentUser) {
+    return null;
+  }
+  
   const userId = (currentUser as any)?._id;
   const isFaculty = (currentUser as any)?.role === "FACULTY";
   
