@@ -235,7 +235,7 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
       {questions.length === 0 ? (
         <div className="text-center text-muted py-5 border rounded">
           <h6>No questions yet</h6>
-          <p>Click "+ New Question" to add your first question</p>
+          <p>Click &quot;+ New Question&quot; to add your first question</p>
         </div>
       ) : filteredQuestions.length === 0 ? (
         <div className="text-center text-muted py-5 border rounded">
@@ -244,7 +244,7 @@ export default function QuestionsTab({ questions, onQuestionsChange }: Questions
         </div>
       ) : (
         <ListGroup>
-          {filteredQuestions.map((question, index) => {
+          {filteredQuestions.map((question) => {
             const originalIndex = questions.findIndex((q: any) => q._id === question._id);
             return (
               <ListGroup.Item

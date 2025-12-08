@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../../../../store";
@@ -21,16 +21,16 @@ export default function QuizPreview() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
 
-  const fetchQuizzes = async () => {
+  const fetchQuizzes = useCallback(async () => {
     if (cid) {
       const fetchedQuizzes = await client.findQuizzesForCourse(cid as string);
       dispatch(setQuizzes(fetchedQuizzes));
     }
-  };
+  }, [cid, dispatch]);
 
   useEffect(() => {
     fetchQuizzes();
-  }, [cid]);
+  }, [cid, fetchQuizzes]);
 
   useEffect(() => {
     const foundQuiz = quizzes.find((q: any) => q._id === qid);
@@ -386,7 +386,7 @@ export default function QuizPreview() {
 
       {questions.length === 0 ? (
         <Alert variant="warning">
-          This quiz has no questions yet. Click "Edit Quiz" to add questions.
+          This quiz has no questions yet. Click &quot;Edit Quiz&quot; to add questions.
         </Alert>
       ) : oneQuestionAtATime && !showResults ? (
         <>
