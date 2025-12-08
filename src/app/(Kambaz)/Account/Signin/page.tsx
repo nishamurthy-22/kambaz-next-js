@@ -99,6 +99,12 @@ export default function Signin() {
       </Button>
 
       <Link id="wd-signup-link" href="/Account/Signup">Sign up</Link>
+      
+      <div style={{ marginTop: "20px", textAlign: "center" }}>
+        <Link href="/Team" style={{ fontSize: "0.9rem", color: "#6c757d" }}>
+          Team Information
+        </Link>
+      </div>
     </div>
   );
 }
