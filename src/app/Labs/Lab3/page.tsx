@@ -33,7 +33,6 @@ import TodoItem from "./todo/TodoItem";
 import TodoList from "./todo/TodoList";
 
 export default function Lab3() {
-    console.log('Hello World!');
   return (
     <div id="wd-lab3">
       <h3>Lab 3</h3>

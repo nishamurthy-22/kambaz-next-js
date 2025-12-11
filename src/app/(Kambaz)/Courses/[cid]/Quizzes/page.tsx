@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import * as client from "../../client";
 import { useState, useEffect } from "react";

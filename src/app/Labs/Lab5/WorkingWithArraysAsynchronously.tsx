@@ -52,7 +52,6 @@ export default function WorkingWithArraysAsynchronously() {
     const newTodos = todos.filter((t) => t.id !== todo.id);
     setTodos(newTodos);
         } catch (error: any) {
-      console.log(error);
       setErrorMessage(error.response.data.message);
     }
   };

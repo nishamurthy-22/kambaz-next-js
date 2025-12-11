@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { ReactNode, useEffect, useState } from "react";
 import CourseNavigation from "./Navigation";

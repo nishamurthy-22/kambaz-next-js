@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Form, Button, Alert, Card } from "react-bootstrap";
 import { BsTrash } from "react-icons/bs";

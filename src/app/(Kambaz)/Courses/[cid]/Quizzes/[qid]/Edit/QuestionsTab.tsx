@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { Button, Form, ListGroup, InputGroup, FormControl } from "react-bootstrap";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
