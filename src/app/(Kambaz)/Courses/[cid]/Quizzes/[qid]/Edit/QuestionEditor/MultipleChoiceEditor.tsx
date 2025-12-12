@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Form, Button } from "react-bootstrap";
 import { FaCheck } from "react-icons/fa";
@@ -52,6 +53,10 @@ export default function MultipleChoiceEditor({
   };
 
   const handleAddChoice = () => {
+    if (choices.length >= 5){
+      alert("Maximum limit reached");
+      return;
+    }
     setChoices([...choices, ""]);
   };
 
@@ -157,9 +162,10 @@ export default function MultipleChoiceEditor({
           ))}
         </div>
 
+        {choices.length <5 && (
         <Button variant="link" onClick={handleAddChoice} className="mb-3 p-0">
           + Add Another Answer
-        </Button>
+        </Button>)}
 
         <div className="d-flex justify-content-end gap-2 mt-4">
           <Button variant="secondary" onClick={onCancel}>
